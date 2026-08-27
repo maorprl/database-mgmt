@@ -17,7 +17,12 @@
 .editor{overflow:hidden;border-radius:18px;border:1px solid #203a2f;background:#10241c}.editorhead,.editorfoot{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;color:#b8c9bf;font-size:12px}.editorhead{border-bottom:1px solid rgba(255,255,255,.1)}.editorfoot{border-top:1px solid rgba(255,255,255,.1)}#sql{width:100%;min-height:260px;border:0;outline:0;resize:vertical;background:transparent;color:#e8f0eb;padding:20px;font:13px/1.8 Consolas,monospace;direction:ltr;text-align:left}.run{border:0;background:var(--orange);color:white;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer}.run:disabled{opacity:.45}
 .result{overflow:hidden}.resulthead{display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}.tablewrap{overflow:auto;max-height:420px}table{border-collapse:collapse;width:100%;min-width:max-content;font:12px Consolas,monospace;direction:ltr;text-align:left}th{position:sticky;top:0;background:#f0f4f1;padding:10px 12px;border-bottom:1px solid var(--line)}td{padding:9px 12px;border-bottom:1px solid #edf0ed}.err{padding:16px;color:#a33;direction:ltr;text-align:left;white-space:pre-wrap}
 .reason{padding:20px}.reason label{font-weight:900}.reason small{display:block;color:var(--muted);margin:5px 0 8px}.reason textarea{width:100%;min-height:90px;border:1px solid #d8dfda;border-radius:11px;padding:11px;resize:vertical;outline:0}
-.structured{display:flex;flex-direction:column;gap:18px}.structured h4{margin:0 0 8px;font-size:14px}.answergrid{display:grid;grid-template-columns:150px 1fr;gap:8px 12px;align-items:center}.answergrid .rel{direction:ltr;text-align:left;font:12px Consolas,monospace;font-weight:800;color:#42564c}.answergrid select{width:100%;border:1px solid #d8dfda;border-radius:10px;padding:10px;background:white;color:var(--ink);outline:0;direction:ltr;text-align:left}.subq{padding:14px;border:1px solid #e4e9e5;border-radius:12px;background:#fafbf9}.subq p{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.55}.divider{height:1px;background:#e7ebe7}
+.structured{display:flex;flex-direction:column;gap:18px}.structured h4{margin:0 0 8px;font-size:14px}.answergrid{display:grid;grid-template-columns:150px 1fr;gap:8px 12px;align-items:center}.answergrid .rel{direction:ltr;text-align:left;font:12px Consolas,monospace;font-weight:800;color:#42564c}.answergrid select{width:100%;border:1px solid #d8dfda;border-radius:10px;padding:10px;background:white;color:var(--ink);outline:0;direction:ltr;text-align:left}
+.answer-exp{grid-column:1 / -1;margin:-2px 0 8px;padding:10px 12px;border-radius:9px;font-size:12px;line-height:1.65}
+.answer-exp.good{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}
+.answer-exp.wrong{background:#fff5f1;border:1px solid #efc9bc;color:#864b38}
+.answer-exp b{font-weight:900}
+.subq{padding:14px;border:1px solid #e4e9e5;border-radius:12px;background:#fafbf9}.subq p{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.55}.divider{height:1px;background:#e7ebe7}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.check,.hintbtn,.solutionbtn{border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}.check{border:0;background:var(--green);color:white}.hintbtn,.solutionbtn{border:1px solid var(--line);background:white}.feedback{margin-top:13px;padding:12px;border-radius:10px;line-height:1.6}.ok{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}.bad{background:#fff5f1;border:1px solid #efc9bc;color:#864b38}.hintbox,.solutionbox{margin-top:12px;padding:12px;border-radius:10px}.hintbox{background:#fffaf0;border:1px solid #ead8aa;color:#74633f}.solutionbox{background:#f8faf8;border:1px solid var(--line)}.solutionbox pre{direction:ltr;text-align:left;white-space:pre-wrap;background:#17251f;color:#e6eee9;padding:12px;border-radius:8px;overflow:auto}
 .nav{display:flex;justify-content:space-between}.nav button{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer}.nav .next{background:var(--green);color:white}.nav button:disabled{opacity:.4}
 .side{position:sticky;top:88px;height:max-content;display:flex;flex-direction:column;gap:14px}.side .card{padding:16px}.side h3{font-size:12px;margin:0 0 10px;color:#4c685a}.schema button{border:0;background:#eef3ef;border-radius:8px;padding:7px 9px;margin:3px;font:11px Consolas;cursor:pointer}.schema button.sel{background:var(--green);color:white}.schemabox{margin-top:10px;font:11px/1.65 Consolas;direction:ltr;text-align:left;color:#53645b}.principles ul{padding-right:18px;margin:0}.principles li{font-size:12px;line-height:1.6;color:#607168;margin:5px 0}
@@ -103,9 +108,36 @@ const CARD_OPTIONS=[
   ["M:M","M:M — רבים לרבים"]
 ];
 function opts(options,current){return options.map(([v,t])=>'<option value="'+v+'" '+(current===v?'selected':'')+'>'+t+'</option>').join('');}
+function grainExplanation(rel,choice){
+ const correct={accounts:"account",subscriptions:"subscription",users:"user",invoices:"invoice",payments:"payment"};
+ const labels={account:"חשבון אחד",subscription:"מינוי אחד",user:"משתמש אחד",invoice:"חשבונית אחת",payment:"תשלום אחד"};
+ const why={
+  accounts:"account_id הוא Primary Key, ולכן כל tuple ב-accounts מייצג חשבון אחד.",
+  subscriptions:"subscription_id הוא Primary Key, ולכן כל tuple ב-subscriptions מייצג מינוי אחד. account_id רק מציין לאיזה account המינוי שייך.",
+  users:"user_id הוא Primary Key, ולכן כל tuple ב-users מייצג משתמש אחד. account_id יכול לחזור כי לאותו account יכולים להיות כמה users.",
+  invoices:"invoice_id הוא Primary Key, ולכן כל tuple ב-invoices מייצג חשבונית אחת.",
+  payments:"payment_id הוא Primary Key, ולכן כל tuple ב-payments מייצג תשלום אחד. invoice_id יכול לחזור כי חשבונית יכולה לקבל כמה payments."
+ };
+ if(!choice)return "";
+ const ok=choice===correct[rel];
+ return '<div class="answer-exp '+(ok?'good':'wrong')+'"><b>'+(ok?'נכון. ':'לא. התשובה היא '+labels[correct[rel]]+'. ')+'</b>'+why[rel]+'</div>';
+}
+function cardExplanation(key,choice){
+ const correct={acc_sub:"1:0..1",acc_users:"1:M",acc_inv:"1:M",inv_pay:"1:M"};
+ const labels={"1:1":"1:1 — אחד לאחד","1:0..1":"1:0..1 — אפס או אחד","1:M":"1:M — אחד לרבים","M:M":"M:M — רבים לרבים"};
+ const why={
+  acc_sub:"subscriptions.account_id הוא UNIQUE, ולכן אותו account לא יכול להופיע ביותר מ-subscription אחת. מצד שני, מבנה הטבלאות לא מחייב שכל account יופיע ב-subscriptions, ולכן מהכיוון accounts → subscriptions זה אפס או אחת.",
+  acc_users:"users.account_id אינו UNIQUE, ולכן אותו account_id יכול להופיע בכמה rows של users. כל user שייך ל-account אחד, אבל ל-account אחד יכולים להיות כמה users.",
+  acc_inv:"invoices.account_id אינו UNIQUE, ולכן אותו account_id יכול להופיע בכמה invoices. כל invoice שייכת ל-account אחד, אבל ל-account אחד יכולות להיות כמה invoices.",
+  inv_pay:"payments.invoice_id אינו UNIQUE, ולכן אותה invoice יכולה להופיע בכמה rows של payments. כל payment שייך ל-invoice אחת, אבל ל-invoice אחת יכולים להיות כמה payments."
+ };
+ if(!choice)return "";
+ const ok=choice===correct[key];
+ return '<div class="answer-exp '+(ok?'good':'wrong')+'"><b>'+(ok?'נכון. ':'לא. התשובה היא '+labels[correct[key]]+'. ')+'</b>'+why[key]+'</div>';
+}
 function structuredHtml(){
  const g=state.structured.grain||{}, k=state.structured.card||{};
- const rels=[["accounts","account"],["subscriptions","subscription"],["users","user"],["invoices","invoice"],["payments","payment"]];
+ const rels=["accounts","subscriptions","users","invoices","payments"];
  const pairs=[
    ["acc_sub","accounts → subscriptions"],
    ["acc_users","accounts → users"],
@@ -114,10 +146,10 @@ function structuredHtml(){
  ];
  return '<div class="structured">'+
    '<div class="subq"><h4>1. מה מייצגת שורה אחת?</h4><p>בחרו את ה-Grain של כל relation.</p><div class="answergrid">'+
-   rels.map(([r])=>'<div class="rel">'+r+'</div><select data-grain="'+r+'">'+opts(GRAIN_OPTIONS,g[r]||'')+'</select>').join('')+
+   rels.map(r=>'<div class="rel">'+r+'</div><select data-grain="'+r+'">'+opts(GRAIN_OPTIONS,g[r]||'')+'</select>'+grainExplanation(r,g[r]||'')).join('')+
    '</div></div><div class="divider"></div>'+
-   '<div class="subq"><h4>2. מה ה-cardinality?</h4><p>בחרו לפי מבנה הנתונים. 1:0..1 פירושו שלישות בצד השני יכולה להיות חסרה, אבל לא יכולות להיות יותר מאחת.</p><div class="answergrid">'+
-   pairs.map(([key,label])=>'<div class="rel">'+label+'</div><select data-card="'+key+'">'+opts(CARD_OPTIONS,k[key]||'')+'</select>').join('')+
+   '<div class="subq"><h4>2. מה ה-cardinality?</h4><p>בחרו את סוג הקשר לפי מבנה הנתונים.</p><div class="answergrid">'+
+   pairs.map(([key,label])=>'<div class="rel">'+label+'</div><select data-card="'+key+'">'+opts(CARD_OPTIONS,k[key]||'')+'</select>'+cardExplanation(key,k[key]||'')).join('')+
    '</div></div></div>';
 }
 function checkStructured(){
@@ -166,8 +198,8 @@ function bind(){
  const ed=document.getElementById('sql'), note=document.getElementById('note');
  ed.oninput=()=>{state.sql[state.stage]=ed.value;save();};
  if(note) note.oninput=()=>{state.notes[state.stage]=note.value;save();};
- document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();});
- document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();});
+ document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
+ document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
  document.getElementById('run').onclick=()=>{try{lastResult=exec(ed.value);lastError='';}catch(e){lastResult=null;lastError=e.message;}render();};
  document.getElementById('hint').onclick=()=>{const i=state.hint[state.stage];state.hint[state.stage]=i===undefined?0:Math.min(i+1,curr().hints.length-1);save();render();};
  document.getElementById('solution').onclick=()=>{state.solution[state.stage]=!state.solution[state.stage];save();render();};
