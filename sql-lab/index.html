@@ -133,7 +133,17 @@ const STAGES=[
 let db=null, dbError='', preview='accounts';
 const defaults=()=>({stage:0,sql:{},notes:{},completed:[],hint:{},solution:{},structured:{grain:{},card:{}}});
 let state=load();
-function load(){try{const d=defaults(),x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');const out=Object.assign(d,x);out.structured=Object.assign({grain:{},card:{}},x.structured||{});out.structured.grain=out.structured.grain||{};out.structured.card=out.structured.card||{};if(out.structured.card.acc_sub==="1:0..1")out.structured.card.acc_sub="1:1";return out;}catch(e){return defaults();}}
+function load(){try{
+ const d=defaults(),x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+ const out=Object.assign(d,x);
+ out.structured=Object.assign({grain:{},card:{}},x.structured||{});
+ out.structured.grain=out.structured.grain||{};
+ out.structured.card=out.structured.card||{};
+ if(out.structured.card.acc_sub==="1:0..1")out.structured.card.acc_sub="1:1";
+ const oldStage0="SELECT * FROM accounts;\n\n-- החליפו את שם הטבלה כדי לבדוק relations נוספים";
+ if(out.sql&&out.sql[0]===oldStage0) out.sql[0]="SELECT *\nFROM accounts;";
+ return out;
+}catch(e){return defaults();}}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
 function curr(){return STAGES[state.stage];}
