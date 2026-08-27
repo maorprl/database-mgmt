@@ -58,7 +58,8 @@ const SEED_SQL=[
 
 const TABLES={
 accounts:["account_id PK","account_name","segment","created_at"],
-subscriptions:["subscription_id PK","account_id UNIQUE","plan_id","status","started_at","cancelled_at"],
+plans:["plan_id PK","plan_name UNIQUE","monthly_price"],
+subscriptions:["subscription_id PK","account_id UNIQUE","plan_id FK","status","started_at","cancelled_at"],
 users:["user_id PK","account_id FK","full_name","role"],
 invoices:["invoice_id PK","account_id FK","issued_at","issue_month","due_at","status","amount_due"],
 payments:["payment_id PK","invoice_id FK","paid_at","amount","method"],
@@ -72,6 +73,11 @@ accounts:{
  account_name:"TEXT · שם חשבון",
  segment:"{Starter, Growth, Enterprise}",
  created_at:"DATE · YYYY-MM-DD"
+},
+plans:{
+ plan_id:"INTEGER · מזהה plan (FK→plans)",
+ plan_name:"{Starter, Growth, Enterprise} · UNIQUE",
+ monthly_price:"INTEGER · מחיר חודשי"
 },
 subscriptions:{
  subscription_id:"INTEGER · מזהה מינוי",
@@ -127,7 +133,8 @@ const STAGES=[
 {title:"מה סך החיוב בכל חודש?",short:"GROUP BY משנה Grain",eye:"Aggregation · Grain חדש",context:"כעת יחידת הניתוח היא חודש, לא account ולא invoice.",task:"החזירו issue_month, invoice_count ו-total_issued לכל חודש, לפי issue_month.",starter:"",expected:"SELECT i.issue_month,COUNT(*) invoice_count,SUM(i.amount_due) total_issued FROM invoices i GROUP BY i.issue_month ORDER BY i.issue_month;",note:"מה מייצגת שורה אחת אחרי GROUP BY?",hints:["עמודת הקיבוץ מגדירה את ה-Grain החדש.","אל תוסיפו account_name אם השאלה היא חודשית.","GROUP BY i.issue_month"],solution:"SELECT i.issue_month,COUNT(*) AS invoice_count,SUM(i.amount_due) AS total_issued FROM invoices i GROUP BY i.issue_month ORDER BY i.issue_month;",principle:"GROUP BY מגדיר Grain חדש: row אחת לכל combination של ערכי הקיבוץ."},
 {title:"כמה projects משויכים לכל user?",short:"Many-to-Many",eye:"Bridge relation · יחידת הספירה",context:"users ו-projects קשורים M:M דרך project_memberships.",task:"החזירו full_name ו-project_count לכל user, כולל מי שאין לו project, לפי user_id.",starter:"",expected:"SELECT u.full_name,COUNT(DISTINCT pm.project_id) project_count FROM users u LEFT JOIN project_memberships pm ON pm.user_id=u.user_id GROUP BY u.user_id,u.full_name ORDER BY u.user_id;",note:"מה מייצגת row ב-bridge ומה אתם רוצים לספור?",hints:["project_memberships מייצג relationship.","COUNT(*) על LEFT JOIN שוב כולל row NULL.","ספרו project_id ייחודיים."],solution:"SELECT u.full_name,COUNT(DISTINCT pm.project_id) AS project_count FROM users u LEFT JOIN project_memberships pm ON pm.user_id=u.user_id GROUP BY u.user_id,u.full_name ORDER BY u.user_id;",principle:"ב-M:M, bridge rows מייצגים relationships; הגדירו במפורש את יחידת הספירה."},
 {title:"Invoices × Users: מלכודת ה-Fan-out",short:"Pre-aggregation",eye:"1:M × 1:M · ניפוח מדדים",context:"רוצים report לכל account עם מספר users, מספר invoices וסכום invoices. JOIN ישיר ל-users וגם invoices יוצר שילובים.",task:"החזירו לכל account account_name, user_count, invoice_count ו-total_issued בלי לנפח אף מדד. בצעו aggregation לכל child relation לפני החיבור.",pred:"אם ל-account יש 3 users ו-3 invoices, JOIN ישיר יכול לייצר 9 rows.",starter:"",expected:"WITH inv AS (SELECT account_id,COUNT(*) invoice_count,SUM(amount_due) total_issued FROM invoices GROUP BY account_id), usr AS (SELECT account_id,COUNT(*) user_count FROM users GROUP BY account_id) SELECT a.account_name,COALESCE(usr.user_count,0) user_count,COALESCE(inv.invoice_count,0) invoice_count,COALESCE(inv.total_issued,0) total_issued FROM accounts a LEFT JOIN inv ON inv.account_id=a.account_id LEFT JOIN usr ON usr.account_id=a.account_id ORDER BY a.account_id;",note:"למה DISTINCT על SUM אינו תיקון כללי ל-fan-out?",hints:["זה 1:M × 1:M.","צמצמו כל child ל-row אחת לכל account קודם.","CTE אחד ל-invoices ואחד ל-users."],solution:"WITH inv AS (SELECT account_id,COUNT(*) AS invoice_count,SUM(amount_due) AS total_issued FROM invoices GROUP BY account_id), usr AS (SELECT account_id,COUNT(*) AS user_count FROM users GROUP BY account_id) SELECT a.account_name,COALESCE(usr.user_count,0) AS user_count,COALESCE(inv.invoice_count,0) AS invoice_count,COALESCE(inv.total_issued,0) AS total_issued FROM accounts a LEFT JOIN inv ON inv.account_id=a.account_id LEFT JOIN usr ON usr.account_id=a.account_id ORDER BY a.account_id;",principle:"כשכמה child relations הם 1:M, pre-aggregate כל אחד ל-Grain המשותף לפני JOIN."},
-{title:"Capstone: מדד + תנאי קיום + תנאי היעדר",short:"JOIN + EXISTS",eye:"שילוב כלים · בחירת operator לפי תפקיד",context:"הפעם payments דרושים למדד, בעוד invoice status משמש גם כתנאי קיום והיעדר.",task:"החזירו account_name ו-total_paid עבור accounts שסך התשלומים שלהם לפחות 120, שיש להם לפחות invoice paid אחת, ושאין להם שום invoice open. סדרו לפי account_name.",starter:"",expected:"SELECT a.account_name,SUM(p.amount) total_paid FROM accounts a JOIN invoices i ON i.account_id=a.account_id JOIN payments p ON p.invoice_id=i.invoice_id WHERE EXISTS (SELECT 1 FROM invoices ip WHERE ip.account_id=a.account_id AND ip.status='paid') AND NOT EXISTS (SELECT 1 FROM invoices io WHERE io.account_id=a.account_id AND io.status='open') GROUP BY a.account_id,a.account_name HAVING SUM(p.amount)>=120 ORDER BY a.account_name;",note:"איזה relation דרוש למדד ואיזה רק כתנאי?",hints:["payments חייב להיות JOIN כי SUM(p.amount) משתמש ב-rows שלו.","'יש paid' הוא EXISTS.","'אין open' הוא NOT EXISTS."],solution:"SELECT a.account_name,SUM(p.amount) AS total_paid FROM accounts a JOIN invoices i ON i.account_id=a.account_id JOIN payments p ON p.invoice_id=i.invoice_id WHERE EXISTS (SELECT 1 FROM invoices ip WHERE ip.account_id=a.account_id AND ip.status='paid') AND NOT EXISTS (SELECT 1 FROM invoices io WHERE io.account_id=a.account_id AND io.status='open') GROUP BY a.account_id,a.account_name HAVING SUM(p.amount)>=120 ORDER BY a.account_name;",principle:"JOIN כשצריך rows למדד; EXISTS/NOT EXISTS כשה-relation משמש כתנאי."}
+{title:"Capstone: מדד + תנאי קיום + תנאי היעדר",short:"JOIN + EXISTS",eye:"שילוב כלים · בחירת operator לפי תפקיד",context:"הפעם payments דרושים למדד, בעוד invoice status משמש גם כתנאי קיום והיעדר.",task:"החזירו account_name ו-total_paid עבור accounts שסך התשלומים שלהם לפחות 120, שיש להם לפחות invoice paid אחת, ושאין להם שום invoice open. סדרו לפי account_name.",starter:"",expected:"SELECT a.account_name,SUM(p.amount) total_paid FROM accounts a JOIN invoices i ON i.account_id=a.account_id JOIN payments p ON p.invoice_id=i.invoice_id WHERE EXISTS (SELECT 1 FROM invoices ip WHERE ip.account_id=a.account_id AND ip.status='paid') AND NOT EXISTS (SELECT 1 FROM invoices io WHERE io.account_id=a.account_id AND io.status='open') GROUP BY a.account_id,a.account_name HAVING SUM(p.amount)>=120 ORDER BY a.account_name;",note:"איזה relation דרוש למדד ואיזה רק כתנאי?",hints:["payments חייב להיות JOIN כי SUM(p.amount) משתמש ב-rows שלו.","'יש paid' הוא EXISTS.","'אין open' הוא NOT EXISTS."],solution:"SELECT a.account_name,SUM(p.amount) AS total_paid FROM accounts a JOIN invoices i ON i.account_id=a.account_id JOIN payments p ON p.invoice_id=i.invoice_id WHERE EXISTS (SELECT 1 FROM invoices ip WHERE ip.account_id=a.account_id AND ip.status='paid') AND NOT EXISTS (SELECT 1 FROM invoices io WHERE io.account_id=a.account_id AND io.status='open') GROUP BY a.account_id,a.account_name HAVING SUM(p.amount)>=120 ORDER BY a.account_name;",principle:"JOIN כשצריך rows למדד; EXISTS/NOT EXISTS כשה-relation משמש כתנאי."},
+{title:"פתירת התיק: אילו invoices לא כוסו במלואן?",short:"פתירת התעלומה",eye:"סגירת החקירה · amount_due מול תשלומים",context:"עכשיו חוזרים לשאלה העסקית שפתחה את החקירה: איפה החיובים לא מסתדרים? חשבונית שסך התשלומים עליה קטן מ-amount_due היא חשבונית שלא כוסתה במלואה. חשבוניות במצב void בוטלו ולכן אינן פער אמיתי.",task:"החזירו account_name, invoice_id, status, amount_due, amount_paid (סך התשלומים על אותה invoice, 0 אם אין) ו-gap (amount_due פחות amount_paid) — רק עבור invoices שאינן void ושבהן amount_paid קטן מ-amount_due. סדרו לפי gap בסדר יורד.",pred:"ה-Grain של התוצאה הוא invoice. invoice בלי payments חייבת להישאר בתוצאה, והסינון על הפער מתרחש אחרי aggregation.",starter:"",expected:"SELECT a.account_name,i.invoice_id,i.status,i.amount_due,COALESCE(SUM(p.amount),0) amount_paid,i.amount_due-COALESCE(SUM(p.amount),0) gap FROM accounts a JOIN invoices i ON i.account_id=a.account_id LEFT JOIN payments p ON p.invoice_id=i.invoice_id WHERE i.status<>'void' GROUP BY i.invoice_id,a.account_name,i.status,i.amount_due HAVING COALESCE(SUM(p.amount),0)<i.amount_due ORDER BY gap DESC;",note:"מה ה-Grain של התוצאה, ולמה LEFT JOIN נחוץ כאן?",hints:["ה-Grain הוא invoice — קבצו לפי invoice_id.","invoice בלי payment חייבת LEFT JOIN + COALESCE(SUM(p.amount),0).","הסינון 'שולם פחות מהחיוב' הוא על ערך מצרפי, לכן HAVING ולא WHERE."],solution:"SELECT a.account_name,i.invoice_id,i.status,i.amount_due,COALESCE(SUM(p.amount),0) AS amount_paid,i.amount_due-COALESCE(SUM(p.amount),0) AS gap FROM accounts a JOIN invoices i ON i.account_id=a.account_id LEFT JOIN payments p ON p.invoice_id=i.invoice_id WHERE i.status<>'void' GROUP BY i.invoice_id,a.account_name,i.status,i.amount_due HAVING COALESCE(SUM(p.amount),0)<i.amount_due ORDER BY gap DESC;",principle:"כדי למצוא פער עסקי, ממקמים אותו ב-Grain הנכון, שומרים גם rows בלי match, ומסננים aggregate אחרי הקיבוץ."}
 ];
 
 let db=null, dbError='', preview='accounts';
@@ -143,7 +150,6 @@ function load(){try{
  out.skipped=out.skipped||[];
  if(out.structured.card.acc_sub==="1:0..1")out.structured.card.acc_sub="1:1";
  if((x.version||0)<APP_STATE_VERSION){
-   out.sql={};
    out.version=APP_STATE_VERSION;
    localStorage.setItem(STORAGE_KEY,JSON.stringify(out));
  }
@@ -197,7 +203,8 @@ const STAGE_DIAGNOSTIC_TIPS=[
  "שורה אחת בתוצאה צריכה לייצג חודש אחד. עמודת הקיבוץ היא issue_month.",
  "project_memberships הוא relation של הקשר. ב-LEFT JOIN ספרו project_id אמיתי/ייחודי, לא את שורת ה-NULL.",
  "יש כאן 1:M × 1:M. אם המספרים מנופחים, צמצמו כל child ל-row אחת לכל account לפני שמחברים.",
- "payments נדרש למדד עצמו; paid ו-open הם תנאי קיום/היעדר. הפרידו בין relations שמייצרים את המדד לבין relations שמשמשים כתנאי."
+ "payments נדרש למדד עצמו; paid ו-open הם תנאי קיום/היעדר. הפרידו בין relations שמייצרים את המדד לבין relations שמשמשים כתנאי.",
+ "קבצו ברמת invoice, השתמשו ב-LEFT JOIN ל-payments עם COALESCE(SUM(p.amount),0), הוציאו void ב-WHERE, וסננו את הפער ב-HAVING."
 ];
 function friendlySqlError(msg){
  const m=String(msg||'');
@@ -228,7 +235,13 @@ function diagnoseResult(user,exp,stage){
  if(STAGE_DIAGNOSTIC_TIPS[stage])parts.push("כיוון: "+STAGE_DIAGNOSTIC_TIPS[stage]);
  return parts.join(" ");
 }
-function exec(sql){const rs=db.exec(sql);if(!rs.length)return {columns:['status'],values:[['OK']]};return rs[rs.length-1];}
+const DESTRUCTIVE=/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|ATTACH|DETACH|PRAGMA|VACUUM|REINDEX)\b/i;
+function exec(sql){
+ if(DESTRUCTIVE.test(sql))throw new Error("המעבדה מיועדת לשאילתות קריאה בלבד (SELECT / WITH). פקודות שמשנות את הנתונים חסומות כדי לא לשבור את מסד הנתונים.");
+ const rs=db.exec(sql);
+ if(!rs.length)return {columns:['status'],values:[['OK']]};
+ return rs[rs.length-1];
+}
 function resultHtml(r){if(!r)return'';return '<div class="tablewrap"><table><thead><tr>'+r.columns.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+r.values.map(row=>'<tr>'+row.map(v=>'<td>'+(v===null?'<em>NULL</em>':esc(v))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
 function previewDataHtml(table){
  if(!db)return '<div class="schema-note">הנתונים יופיעו כשהמסד יסיים להיטען.</div>';
@@ -347,7 +360,7 @@ function bind(){
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
  document.getElementById('run').onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';queryFeedback='';}catch(e){lastResult=null;lastError=friendlySqlError(e.message);queryFeedback='';}render();};
  document.getElementById('hint').onclick=()=>{const i=state.hint[state.stage];state.hint[state.stage]=i===undefined?0:Math.min(i+1,curr().hints.length-1);save();render();};
- document.getElementById('solution').onclick=()=>{state.solution[state.stage]=!state.solution[state.stage];save();render();};
+ document.getElementById('solution').onclick=()=>{if(!state.solution[state.stage]&&state.hint[state.stage]===undefined&&!confirm('להציג את הפתרון המלא? כדאי קודם לנסות רמז ולהריץ ניסיון משלכם.'))return;state.solution[state.stage]=!state.solution[state.stage];save();render();};
  const checkQueryNow=()=>{
    try{
      if(!ed.value.trim()){queryFeedback='כתבו שאילתת SQL לפני הבדיקה.';}
