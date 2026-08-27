@@ -254,7 +254,7 @@ function render(){
  '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+(!allowed(i)?'locked':'')+'" data-step="'+i+'" '+(!allowed(i)?'disabled':'')+'><span class="n">'+(done(i)?'✓':skipped(i)?'↷':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+(skipped(i)?' · דולג':'')+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+esc(s.context)+'</div><div class="task"><b>המשימה</b><br>'+esc(s.task)+'</div>'+(s.pred?'<div class="prediction"><b>לפני ההרצה:</b> '+esc(s.pred)+'</div>':'')+'</article>'+
- '<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button>'+(state.stage>0?'<button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button>':'')+'</div></div></section>'+
+ '<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button>'+'<button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button>'+'</div></div></section>'+
  ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
  '<section class="card reason"><label>'+(state.stage===0?'תשובה מובנית':'הסבר / תחזית')+'</label><small>'+esc(s.note)+'</small>'+(state.stage===0?structuredHtml():'<textarea id="note">'+esc(state.notes[state.stage]||'')+'</textarea>')+'<div class="actions">'+(state.stage===0?'<button class="check" id="check">בדוק תשובה</button>':'')+'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button></div>'+
  (state.hint[state.stage]!==undefined?'<div class="hintbox">'+esc(s.hints[state.hint[state.stage]])+'</div>':'')+
@@ -281,9 +281,11 @@ function bind(){
  const doCheck=()=>{
    try{
      if(state.stage===0){
-       const r=checkStructured();
-       feedback=r.msg;
-       if(r.ok){if(!done(0))state.completed.push(0);state.skipped=(state.skipped||[]).filter(i=>i!==0);}
+       if(!ed.value.trim()){feedback='כתבו שאילתת SQL לפני הבדיקה.';}
+       else{
+         const user=exec(ed.value);
+         feedback='השאילתה תקינה ורצה. עכשיו השתמשו בתוצאה כדי לענות על ה-Grain וה-cardinality למטה.';
+       }
      }else{
        if(!ed.value.trim()){feedback='כתבו שאילתת SQL לפני הבדיקה.';}
        else{
