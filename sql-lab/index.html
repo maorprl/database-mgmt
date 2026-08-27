@@ -30,6 +30,36 @@
 @media(max-width:760px){.layout{display:block;padding:12px}.steps,.side{position:static;margin-bottom:12px}.steps{max-height:none}.steps nav{display:flex;overflow:auto}.step{min-width:175px}.hero h2{font-size:24px}.top{padding:12px}.top h1{font-size:16px}.side{display:block}.side .card{margin-top:12px}}
 .decgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:6px}.decgrid>div{background:#fff;padding:9px 11px;font-size:12px;line-height:1.5}.decgrid .dh{background:#f0f4f1;font-weight:900;color:#31483d}.decgrid .dt{font-weight:800;color:#285e43;direction:ltr;text-align:left}.decquiz select{width:100%;border:1px solid #d8dfda;border-radius:10px;padding:10px;background:#fff;outline:0;margin-top:4px}
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<style>
+.topbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ghostbtn{border:1px solid var(--line);background:white;border-radius:9px;padding:9px 11px;font-weight:800;cursor:pointer;color:var(--ink)}
+.clearbtn{border:1px dashed var(--line);background:#f8faf8;color:#6c756f;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer}
+.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
+#cmwrap .CodeMirror{height:260px;font:13px/1.7 Consolas,monospace;direction:ltr;text-align:left;background:#10241c;color:#e8f0eb}
+#cmwrap .CodeMirror-gutters{background:#10241c;border-right:1px solid rgba(255,255,255,.1)}
+#cmwrap .CodeMirror-linenumber{color:#73877c}
+#cmwrap .cm-s-default .cm-keyword{color:#8fd8b8}
+#cmwrap .cm-s-default .cm-operator{color:#f0c877}
+#cmwrap .cm-s-default .cm-number{color:#f3a17e}
+#cmwrap .cm-s-default .cm-string{color:#d6b8ff}
+#cmwrap .CodeMirror-cursor{border-left-color:#e8f0eb}
+:root[data-theme="dark"]{--bg:#0f1a15;--ink:#e6efe9;--muted:#9fb0a6;--line:#28362f;--green:#2b7a5b;--green2:#4fbc8f;--white:#152019;--shadow:0 8px 24px rgba(0,0,0,.35)}
+:root[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
+:root[data-theme="dark"] .card{background:#152019;border-color:var(--line)}
+:root[data-theme="dark"] .top{background:rgba(15,26,21,.97)}
+:root[data-theme="dark"] .task,:root[data-theme="dark"] .subq,:root[data-theme="dark"] .joinchain,:root[data-theme="dark"] .schema-note,:root[data-theme="dark"] .data-preview .tablewrap{background:#18241d;border-color:var(--line)}
+:root[data-theme="dark"] .ghostbtn,:root[data-theme="dark"] .reset,:root[data-theme="dark"] .nav button,:root[data-theme="dark"] .hintbtn,:root[data-theme="dark"] .solutionbtn,:root[data-theme="dark"] .clearbtn{background:#18241d;color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] th{background:#1c2a22;color:#cfe0d7}
+:root[data-theme="dark"] td{border-color:#243229}
+:root[data-theme="dark"] .schema button{background:#1c2a22;color:#cfe0d7}
+:root[data-theme="dark"] .reason textarea,:root[data-theme="dark"] .answergrid select,:root[data-theme="dark"] .decquiz select{background:#18241d;color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .schema-graph svg{background:#141f18;border-color:var(--line)}
+:root[data-theme="dark"] .prediction{background:#241a12;border-color:#5a4222;color:#e6c79c}
+</style>
 </head>
 <body>
 <div id="app">טוען...</div>
@@ -140,25 +170,36 @@ const STAGES=[
 {title:"Invoices × Users: מלכודת ה-Fan-out",short:"Pre-aggregation",eye:"1:M × 1:M · ניפוח מדדים",context:"רוצים report לכל account עם מספר users, מספר invoices וסכום invoices. JOIN ישיר ל-users וגם invoices יוצר שילובים.",task:"החזירו לכל account account_name, user_count, invoice_count ו-total_issued בלי לנפח אף מדד. בצעו aggregation לכל child relation לפני החיבור.",pred:"נסו לחזות לפני ההרצה: אם ל-account יש כמה users וגם כמה invoices, כמה rows ייצור JOIN ישיר לשניהם? מה יקרה ל-SUM(amount_due)? רשמו את הניחוש שלכם בשדה ההסבר, ורק אז הריצו את הגרסה הנאיבית ובדקו.",requireNote:true,starter:"",expected:"WITH inv AS (SELECT account_id,COUNT(*) invoice_count,SUM(amount_due) total_issued FROM invoices GROUP BY account_id), usr AS (SELECT account_id,COUNT(*) user_count FROM users GROUP BY account_id) SELECT a.account_name,COALESCE(usr.user_count,0) user_count,COALESCE(inv.invoice_count,0) invoice_count,COALESCE(inv.total_issued,0) total_issued FROM accounts a LEFT OUTER JOIN inv ON inv.account_id=a.account_id LEFT OUTER JOIN usr ON usr.account_id=a.account_id ORDER BY a.account_id;",note:"למה DISTINCT על SUM אינו תיקון כללי ל-fan-out?",hints:["זה 1:M × 1:M.","צמצמו כל child ל-row אחת לכל account קודם.","CTE אחד ל-invoices ואחד ל-users."],solution:"WITH inv AS (SELECT account_id,COUNT(*) AS invoice_count,SUM(amount_due) AS total_issued FROM invoices GROUP BY account_id), usr AS (SELECT account_id,COUNT(*) AS user_count FROM users GROUP BY account_id) SELECT a.account_name,COALESCE(usr.user_count,0) AS user_count,COALESCE(inv.invoice_count,0) AS invoice_count,COALESCE(inv.total_issued,0) AS total_issued FROM accounts a LEFT OUTER JOIN inv ON inv.account_id=a.account_id LEFT OUTER JOIN usr ON usr.account_id=a.account_id ORDER BY a.account_id;",principle:"כשכמה child relations הם 1:M, pre-aggregate כל אחד ל-Grain המשותף לפני JOIN."},
 {title:"Capstone: מדד + תנאי קיום + תנאי היעדר",short:"JOIN + EXISTS",eye:"שילוב כלים · בחירת operator לפי תפקיד",context:"הפעם payments דרושים למדד, בעוד invoice status משמש גם כתנאי קיום והיעדר.",task:"החזירו account_name ו-total_paid עבור accounts שסך התשלומים שלהם לפחות 120, שיש להם לפחות invoice paid אחת, ושאין להם שום invoice open. סדרו לפי account_name.",starter:"",expected:"SELECT a.account_name,SUM(p.amount) total_paid FROM accounts a JOIN invoices i ON i.account_id=a.account_id JOIN payments p ON p.invoice_id=i.invoice_id WHERE EXISTS (SELECT 1 FROM invoices ip WHERE ip.account_id=a.account_id AND ip.status='paid') AND NOT EXISTS (SELECT 1 FROM invoices io WHERE io.account_id=a.account_id AND io.status='open') GROUP BY a.account_id,a.account_name HAVING SUM(p.amount)>=120 ORDER BY a.account_name;",note:"רשמו לפני הבדיקה: איזה relation דרוש למדד ואיזה רק כתנאי קיום/היעדר?",requireNote:true,hints:["payments חייב להיות JOIN כי SUM(p.amount) משתמש ב-rows שלו.","'יש paid' הוא EXISTS.","'אין open' הוא NOT EXISTS."],solution:"SELECT a.account_name,SUM(p.amount) AS total_paid FROM accounts a JOIN invoices i ON i.account_id=a.account_id JOIN payments p ON p.invoice_id=i.invoice_id WHERE EXISTS (SELECT 1 FROM invoices ip WHERE ip.account_id=a.account_id AND ip.status='paid') AND NOT EXISTS (SELECT 1 FROM invoices io WHERE io.account_id=a.account_id AND io.status='open') GROUP BY a.account_id,a.account_name HAVING SUM(p.amount)>=120 ORDER BY a.account_name;",principle:"JOIN כשצריך rows למדד; EXISTS/NOT EXISTS כשה-relation משמש כתנאי."},
 {title:"פתירת התיק: אילו invoices לא כוסו במלואן?",short:"פתירת התעלומה",eye:"סגירת החקירה · amount_due מול תשלומים",context:"עכשיו חוזרים לשאלה העסקית שפתחה את החקירה: איפה החיובים לא מסתדרים? חשבונית שסך התשלומים עליה קטן מ-amount_due היא חשבונית שלא כוסתה במלואה. חשבוניות במצב void בוטלו ולכן אינן פער אמיתי.",task:"החזירו account_name, invoice_id, status, amount_due, amount_paid (סך התשלומים על אותה invoice, 0 אם אין) ו-gap (amount_due פחות amount_paid) — רק עבור invoices שאינן void ושבהן amount_paid קטן מ-amount_due. סדרו לפי gap בסדר יורד.",pred:"ה-Grain של התוצאה הוא invoice. invoice בלי payments חייבת להישאר בתוצאה, והסינון על הפער מתרחש אחרי aggregation.",starter:"",expected:"SELECT a.account_name,i.invoice_id,i.status,i.amount_due,COALESCE(SUM(p.amount),0) amount_paid,i.amount_due-COALESCE(SUM(p.amount),0) gap FROM accounts a JOIN invoices i ON i.account_id=a.account_id LEFT OUTER JOIN payments p ON p.invoice_id=i.invoice_id WHERE i.status<>'void' GROUP BY i.invoice_id,a.account_name,i.status,i.amount_due HAVING COALESCE(SUM(p.amount),0)<i.amount_due ORDER BY gap DESC;",note:"רשמו לפני הבדיקה: מה ה-Grain של התוצאה, ולמה LEFT OUTER JOIN נחוץ כאן?",requireNote:true,hints:["ה-Grain הוא invoice — קבצו לפי invoice_id.","invoice בלי payment חייבת LEFT OUTER JOIN + COALESCE(SUM(p.amount),0).","הסינון 'שולם פחות מהחיוב' הוא על ערך מצרפי, לכן HAVING ולא WHERE."],solution:"SELECT a.account_name,i.invoice_id,i.status,i.amount_due,COALESCE(SUM(p.amount),0) AS amount_paid,i.amount_due-COALESCE(SUM(p.amount),0) AS gap FROM accounts a JOIN invoices i ON i.account_id=a.account_id LEFT OUTER JOIN payments p ON p.invoice_id=i.invoice_id WHERE i.status<>'void' GROUP BY i.invoice_id,a.account_name,i.status,i.amount_due HAVING COALESCE(SUM(p.amount),0)<i.amount_due ORDER BY gap DESC;",principle:"כדי למצוא פער עסקי, ממקמים אותו ב-Grain הנכון, שומרים גם rows בלי match, ומסננים aggregate אחרי הקיבוץ."},
-{title:"Transfer: הכנסה לפי plan — Grain חדש, אותה חשיבה",short:"Transfer · plan grain",eye:"העברת ידע · מניעת fan-out ב-Grain חדש",context:"עד עכשיו רוב הניתוח היה סביב account. עכשיו יחידת הניתוח היא plan. שימו לב: subscriptions→plans הוא M:1, אבל התשלומים מגיעים דרך account→invoices→payments. חיבור נאיבי של הכל יחד עלול לנפח ספירות וסכומים.",task:"החזירו לכל plan: plan_name, subscription_count (מספר המינויים לאותה חבילה) ו-total_paid (סך התשלומים של כל ה-accounts שמנויים לחבילה). סדרו לפי plan_name.",pred:"רשמו לפני ההרצה: אם תחברו plans → subscriptions → accounts → invoices → payments בשרשרת אחת, מה יקרה ל-subscription_count כשל-account יש כמה payments? איפה נדרש pre-aggregation?",requireNote:true,starter:"",expected:"WITH pay AS (SELECT i.account_id,SUM(p.amount) paid FROM invoices i INNER JOIN payments p ON p.invoice_id=i.invoice_id GROUP BY i.account_id) SELECT pl.plan_name,COUNT(*) subscription_count,COALESCE(SUM(pay.paid),0) total_paid FROM subscriptions s INNER JOIN plans pl ON pl.plan_id=s.plan_id LEFT OUTER JOIN pay ON pay.account_id=s.account_id GROUP BY pl.plan_id,pl.plan_name ORDER BY pl.plan_name;",note:"אותו עיקרון של שלב ה-Fan-out, אבל ה-Grain עכשיו הוא plan. מה צריך לצמצם לפני החיבור?",hints:["ה-Grain הוא plan — קבצו לפי plan_id.","תשלומים לכל account הם 1:M דרך invoices→payments; צמצמו אותם ל-row אחת לכל account ב-CTE.","השתמשו ב-LEFT OUTER JOIN ל-CTE כדי לא לאבד מינוי בלי תשלומים, ו-COALESCE ל-0."],solution:"WITH pay AS (SELECT i.account_id,SUM(p.amount) AS paid FROM invoices i INNER JOIN payments p ON p.invoice_id=i.invoice_id GROUP BY i.account_id) SELECT pl.plan_name,COUNT(*) AS subscription_count,COALESCE(SUM(pay.paid),0) AS total_paid FROM subscriptions s INNER JOIN plans pl ON pl.plan_id=s.plan_id LEFT OUTER JOIN pay ON pay.account_id=s.account_id GROUP BY pl.plan_id,pl.plan_name ORDER BY pl.plan_name;",principle:"אותו כלי (pre-aggregation) עובר ל-Grain חדש: מזהים את יחידת התוצאה, מצמצמים ענף 1:M לפני החיבור, ואז מחברים."},
+{title:"Transfer: metrics לפי plan — Grain חדש, fan-out אמיתי",short:"Transfer · plan grain",eye:"העברת ידע · 1:M × 1:M ב-Grain חדש",context:"עכשיו יחידת התוצאה היא plan. לכל subscription יש account, ולכל account יכולים להיות גם כמה users וגם כמה invoices. אם נחבר את שני ענפי ה-1:M ישירות, כל user עלול להשתלב עם כל invoice של אותו account ולנפח את המדדים.",task:"החזירו לכל plan: plan_name, subscription_count, user_count, invoice_count ו-total_issued. אל תנפחו אף מדד. סדרו לפי plan_name.",pred:"לפני הכתיבה: דמיינו account עם 2 users ו-3 invoices. כמה rows ייווצרו אם תחברו subscriptions → users וגם subscriptions → invoices ישירות? איזה Grain צריך לתת לכל child branch לפני שמחברים ל-plan?",requireNote:true,starter:"",expected:"WITH usr AS (SELECT account_id,COUNT(*) user_count FROM users GROUP BY account_id), inv AS (SELECT account_id,COUNT(*) invoice_count,SUM(amount_due) total_issued FROM invoices GROUP BY account_id) SELECT pl.plan_name,COUNT(*) subscription_count,COALESCE(SUM(usr.user_count),0) user_count,COALESCE(SUM(inv.invoice_count),0) invoice_count,COALESCE(SUM(inv.total_issued),0) total_issued FROM subscriptions s INNER JOIN plans pl ON pl.plan_id=s.plan_id LEFT OUTER JOIN usr ON usr.account_id=s.account_id LEFT OUTER JOIN inv ON inv.account_id=s.account_id GROUP BY pl.plan_id,pl.plan_name ORDER BY pl.plan_name;",note:"ה-Grain הסופי הוא plan. הסבירו למה users ו-invoices צריכים להצטמצם קודם ל-row אחת לכל account.",hints:["יש כאן שני child branches בלתי תלויים: users ו-invoices — שניהם 1:M מול account.","צרו CTE אחד ל-users ו-CTE אחד ל-invoices, כל אחד ב-Grain של account.","אחרי ה-pre-aggregation, כל subscription מתחברת לכל היותר ל-row אחת מכל CTE; רק אז מקבצים לפי plan."],solution:"WITH usr AS (SELECT account_id,COUNT(*) AS user_count FROM users GROUP BY account_id), inv AS (SELECT account_id,COUNT(*) AS invoice_count,SUM(amount_due) AS total_issued FROM invoices GROUP BY account_id) SELECT pl.plan_name,COUNT(*) AS subscription_count,COALESCE(SUM(usr.user_count),0) AS user_count,COALESCE(SUM(inv.invoice_count),0) AS invoice_count,COALESCE(SUM(inv.total_issued),0) AS total_issued FROM subscriptions s INNER JOIN plans pl ON pl.plan_id=s.plan_id LEFT OUTER JOIN usr ON usr.account_id=s.account_id LEFT OUTER JOIN inv ON inv.account_id=s.account_id GROUP BY pl.plan_id,pl.plan_name ORDER BY pl.plan_name;",principle:"Transfer אמיתי של pre-aggregation: כששני ענפי 1:M נפגשים לפני Grain היעד, מצמצמים כל ענף ל-Grain המשותף ורק אז מחברים."},
 {title:"Transfer: בריאות לפי segment — כמה accounts עם חוב פתוח?",short:"Transfer · segment grain",eye:"העברת ידע · EXISTS כמדד מצרפי",context:"מנהלת הכספים רוצה תמונת מצב לפי segment. הפעם ה-Grain הוא segment, ותנאי הקיום 'יש invoice פתוחה' הופך למדד שסופרים לכל קבוצה — לא לפילטר.",task:"החזירו לכל segment: account_count (מספר ה-accounts ב-segment) ו-accounts_with_open (כמה מהם יש להם לפחות invoice אחת ב-status='open'). סדרו לפי segment.",pred:"רשמו לפני ההרצה: EXISTS כבר ראיתם כתנאי ב-WHERE. כאן צריך לספור כמה accounts מקיימים אותו בכל segment. איך הופכים תנאי בוליאני לספירה מצרפית?",requireNote:true,starter:"",expected:"SELECT a.segment,COUNT(*) account_count,SUM(CASE WHEN EXISTS (SELECT 1 FROM invoices i WHERE i.account_id=a.account_id AND i.status='open') THEN 1 ELSE 0 END) accounts_with_open FROM accounts a GROUP BY a.segment ORDER BY a.segment;",note:"אותו EXISTS מהשלבים הקודמים — אבל עכשיו בתוך SUM(CASE ...), לא ב-WHERE.",hints:["ה-Grain הוא segment — GROUP BY a.segment.","EXISTS מחזיר תנאי לכל account; עטפו אותו ב-CASE WHEN ... THEN 1 ELSE 0 END.","SUM על ה-CASE סופר כמה accounts בקבוצה מקיימים את התנאי."],solution:"SELECT a.segment,COUNT(*) AS account_count,SUM(CASE WHEN EXISTS (SELECT 1 FROM invoices i WHERE i.account_id=a.account_id AND i.status='open') THEN 1 ELSE 0 END) AS accounts_with_open FROM accounts a GROUP BY a.segment ORDER BY a.segment;",principle:"אותו EXISTS יכול לשמש בתפקיד אחר: לא רק לסינון ב-WHERE, אלא גם לבניית מדד מצרפי."},
 {title:"סיכום: מתי כל כלי?",short:"סיכום · מסגרת החלטה",eye:"סגירה · בחירת כלי לפי תפקיד",summary:true,context:"אין כאן שאילתה חדשה. המטרה היא לא לזכור תבניות, אלא לבחור כלי לפי הבעיה: מה ה-Grain עכשיו, מה ה-Grain הרצוי, והאם relation נוסף דרוש כדי לייצר rows למדד או רק כדי לבדוק תנאי.",task:"עברו על מסגרת ההחלטה וענו על שלוש שאלות הסיכום.",starter:"",expected:null,note:"התאימו כל תרחיש לכלי המתאים.",hints:["צריך rows למדד → JOIN.","רק קיום/היעדר בלי לשנות Grain → EXISTS / NOT EXISTS.","כמה ענפי 1:M יחד → pre-aggregation לפני JOIN."],solution:"רוצה rows בפועל למדד → JOIN. תנאי קיום/היעדר בלי לשנות Grain → EXISTS / NOT EXISTS. לשמור גם rows בלי match → LEFT OUTER JOIN + COALESCE. לשנות יחידת ניתוח → GROUP BY. כמה ענפי 1:M יחד → pre-aggregation. לסנן ערך מצרפי → HAVING.",principle:"בחירת הכלי נגזרת מהתפקיד שלו בבעיה, לא רק מתחביר SQL."}
 ];
 
+const FK_EDGES=[
+ ["subscriptions","accounts","account_id"],
+ ["subscriptions","plans","plan_id"],
+ ["users","accounts","account_id"],
+ ["invoices","accounts","account_id"],
+ ["payments","invoices","invoice_id"],
+ ["projects","accounts","account_id"],
+ ["project_memberships","projects","project_id"],
+ ["project_memberships","users","user_id"]
+];
+
 let db=null, dbError='', preview='accounts';
-const APP_STATE_VERSION=6;
-const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}}});
+const APP_STATE_VERSION=7;
+const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}},theme:'light'});
 let state=load();
-function load(){try{
- const d=defaults(),x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
- const out=Object.assign(d,x);
- out.structured=Object.assign({grain:{},card:{}},x.structured||{});
+function migrateState(x){
+ const out=Object.assign(defaults(),x||{});
+ out.structured=Object.assign({grain:{},card:{}},(x&&x.structured)||{});
  out.structured.grain=out.structured.grain||{};
  out.structured.card=out.structured.card||{};
- out.decision=x.decision||{};
+ out.decision=(x&&x.decision)||{};
  out.skipped=out.skipped||[];
+ out.theme=out.theme==='dark'?'dark':'light';
  if(out.structured.card.acc_sub==="1:0..1")out.structured.card.acc_sub="1:1";
- const v=(x.version||0);
+ const v=((x&&x.version)||0);
  if(v<5){
    const shiftIndex=i=>Number(i)>=3?Number(i)+4:Number(i);
    const shiftMap=o=>Object.fromEntries(Object.entries(o||{}).map(([k,val])=>[String(shiftIndex(k)),val]));
@@ -170,10 +211,13 @@ function load(){try{
    out.solution=shiftMap(out.solution);
    if(Number(out.stage)>=3)out.stage=3;
  }
- if(v<APP_STATE_VERSION){
-   out.version=APP_STATE_VERSION;
-   localStorage.setItem(STORAGE_KEY,JSON.stringify(out));
- }
+ out.version=APP_STATE_VERSION;
+ return out;
+}
+function load(){try{
+ const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+ const out=migrateState(raw);
+ if((raw.version||0)<APP_STATE_VERSION)localStorage.setItem(STORAGE_KEY,JSON.stringify(out));
  return out;
 }catch(e){return defaults();}}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
@@ -309,6 +353,26 @@ function joinVizHtml(type){
  if(type==="chain")return '<section class="card joinviz-card"><div class="joinchain">accounts → subscriptions → plans</div><div><h3>JOIN של שלושה relations</h3><p>כאן Venn פחות מועיל. חושבים על שרשרת: כל ON מחבר זוג relations שיש ביניהם קשר אמיתי.</p><div class="join-rule">לא מדלגים על relation מתווך רק כי שתי ישויות קשורות עסקית.</div></div></section>';
  return "";
 }
+function schemaGraphHtml(){
+ const pos={
+  accounts:[145,18],plans:[35,18],
+  subscriptions:[35,70],users:[145,70],invoices:[255,70],
+  payments:[255,122],projects:[145,122],project_memberships:[35,122]
+ };
+ const W=310,H=165;
+ let edges='';
+ FK_EDGES.forEach(([a,b])=>{
+   const pa=pos[a],pb=pos[b];if(!pa||!pb)return;
+   const on=(a===preview||b===preview);
+   edges+='<line x1="'+pa[0]+'" y1="'+(pa[1]+9)+'" x2="'+pb[0]+'" y2="'+(pb[1]+9)+'" stroke="'+(on?'#e96f47':'#c7d3ca')+'" stroke-width="'+(on?'2':'1')+'"/>';
+ });
+ let boxes='';
+ Object.keys(pos).forEach(t=>{
+   const p=pos[t],sel=(t===preview),w=Math.max(48,t.length*4.8+10);
+   boxes+='<g><rect x="'+(p[0]-w/2)+'" y="'+p[1]+'" rx="4" width="'+w+'" height="18" fill="'+(sel?'#173d30':'#eef3ef')+'" stroke="'+(sel?'#173d30':'#cfdad2')+'"/><text x="'+p[0]+'" y="'+(p[1]+12)+'" text-anchor="middle" font-size="7.5" fill="'+(sel?'#fff':'#3a4b42')+'" font-family="Consolas,monospace">'+esc(t)+'</text></g>';
+ });
+ return '<div class="schema-graph"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Schema relationship graph">'+edges+boxes+'</svg><div class="schema-note">קווים כתומים = קשרי FK שנוגעים ב-relation שנבחר.</div></div>';
+}
 function previewDataHtml(table){
  if(!db)return '<div class="schema-note">הנתונים יופיעו כשהמסד יסיים להיטען.</div>';
  try{
@@ -320,6 +384,8 @@ function previewDataHtml(table){
  }
 }
 let lastResult=null,lastError='',feedback='',queryFeedback='';
+let cm=null;
+function editorValue(){return cm?cm.getValue():(document.getElementById('sql')||{value:''}).value;}
 
 const GRAIN_OPTIONS=[
   ["","בחרו..."],["account","חשבון אחד"],["subscription","מינוי אחד"],["user","משתמש אחד"],["invoice","חשבונית אחת"],["payment","תשלום אחד"]
@@ -429,59 +495,88 @@ function render(){
  const s=curr(), pct=Math.round(state.completed.length/STAGES.length*100);
  const noteVal=state.notes[state.stage]||'';
  const needNote=!!s.requireNote;
+ const dbStatus=db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…');
  document.getElementById('app').innerHTML=
  '<header class="top"><div><div class="kicker">PULSEBOARD · SQL INVESTIGATION</div><h1>תעלומת החיובים שלא מסתדרים</h1></div>'+
  '<div class="progress"><div class="progline"><span>'+state.completed.length+' מתוך '+STAGES.length+' הושלמו</span><span>'+pct+'%</span></div><div class="track"><span style="width:'+pct+'%"></span></div></div>'+
- '<button class="reset" id="reset">איפוס</button></header>'+
+ '<div class="topbtns"><button class="ghostbtn" id="theme" title="מצב תצוגה">'+(state.theme==='dark'?'☀️':'🌙')+'</button><button class="ghostbtn" id="export" title="ייצוא התקדמות">⬇︎ ייצוא</button><button class="ghostbtn" id="importBtn" title="ייבוא התקדמות">⬆︎ ייבוא</button><input type="file" id="importFile" accept="application/json" hidden><button class="reset" id="reset">איפוס</button></div></header>'+
  '<main class="layout">'+
  '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+(!allowed(i)?'locked':'')+'" data-step="'+i+'" '+(!allowed(i)?'disabled':'')+'><span class="n">'+(done(i)?'✓':skipped(i)?'↷':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+(skipped(i)?' · דולג':'')+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+esc(s.context)+'</div><div class="task"><b>המשימה</b><br>'+esc(s.task)+'</div>'+(s.pred?'<div class="prediction"><b>לפני ההרצה:</b> '+esc(s.pred)+'</div>':'')+'</article>'+ (s.joinViz?joinVizHtml(s.joinViz):'')+
- (s.summary?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button></div></div></section>')+
- ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
- (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')?'ok':'bad')+'">'+esc(queryFeedback)+'</div>':'')+
+ (s.summary?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · נשמר אוטומטית · Ctrl/Cmd+Enter להרצה':'נשמר אוטומטית · Ctrl/Cmd+Enter להרצה')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button></div></div></section>')+
+ ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err" aria-live="polite">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
+ (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
  '<section class="card reason"><label>'+(state.stage===0?'תשובה מובנית':s.summary?'סיכום · מסגרת החלטה':'הסבר / תחזית')+(needNote?' · חובה לפני הבדיקה':'')+'</label><small>'+esc(s.note)+'</small>'+
  (state.stage===0?structuredHtml():s.summary?decisionHtml():'<textarea id="note" placeholder="'+(needNote?'רשמו כאן את התחזית/ההסבר שלכם — לפני בדיקת השאילתה':'רשמו כאן את התחזית או ההסבר שלכם (רשות)')+'">'+esc(noteVal)+'</textarea>')+
- '<div class="actions">'+(state.stage===0?'<button class="check" id="check">בדוק תשובה</button>':s.summary?'<button class="check" id="checkDecision">בדוק תשובות</button>':'')+'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button></div>'+
+ '<div class="actions">'+(state.stage===0?'<button class="check" id="check">בדוק תשובה</button>':s.summary?'<button class="check" id="checkDecision">בדוק תשובות</button>':'')+'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button>'+(s.summary?'':'<button class="clearbtn" id="clearStage">נקה שלב</button>')+'</div>'+
  (state.hint[state.stage]!==undefined?'<div class="hintbox">'+esc(s.hints[state.hint[state.stage]])+'</div>':'')+
  (feedback?'<div class="feedback '+(feedback.startsWith('נכון')||feedback.startsWith('מצוין')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+
  (state.solution[state.stage]?'<div class="solutionbox"><b>פתרון מוצע</b>'+(s.summary?'<p>'+esc(s.solution)+'</p>':state.stage===0?'<p>'+esc(s.solution)+'</p>':'<pre>'+esc(s.solution)+'</pre>')+(s.gotcha?'<p><b>מלכודת:</b> '+esc(s.gotcha)+'</p>':'')+'<p><b>עיקרון:</b> '+esc(s.principle)+'</p></div>':'')+
  '</section>'+
  '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="skip" id="skip" '+(state.stage===STAGES.length-1?'disabled':'')+'>דלג לשלב הבא ↷</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
  '</section>'+
- '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div>'+Object.keys(TABLES).map(t=>'<button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>').join('')+'</div><table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr">'+esc(a)+'</td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview)+'</div></section><section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join('')+'</ul></section></aside>'+
+ '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div>'+Object.keys(TABLES).map(t=>'<button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>').join('')+'</div>'+schemaGraphHtml()+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr">'+esc(a)+'</td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview)+'</div></section><section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+(STAGES.filter((x,i)=>done(i)).length?STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join(''):'<li style="color:#9aa79f">עוד לא הושלמו שלבים.</li>')+'</ul></section></aside>'+
  '</main>';
+ mountEditor();
+ applyTheme();
  bind();
+}
+function applyTheme(){document.documentElement.setAttribute('data-theme',state.theme==='dark'?'dark':'light');}
+function mountEditor(){
+ cm=null;
+ const ta=document.getElementById('sql');
+ if(!ta)return;
+ if(window.CodeMirror){
+   cm=CodeMirror.fromTextArea(ta,{mode:'text/x-sql',lineNumbers:true,matchBrackets:true,direction:'ltr',lineWrapping:true,extraKeys:{'Ctrl-Enter':runCurrent,'Cmd-Enter':runCurrent}});
+   cm.setSize('100%',260);
+   cm.on('change',()=>{state.sql[state.stage]=cm.getValue();save();invalidateResult();});
+ }
+}
+function invalidateResult(){
+ lastResult=null;lastError='';queryFeedback='';
+ const rc=document.getElementById('resultCard');if(rc)rc.remove();
+ const qf=document.getElementById('queryFeedback');if(qf)qf.remove();
+}
+function runCurrent(){
+ const val=editorValue();
+ if(!val.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}
+ try{lastResult=exec(val);lastError='';queryFeedback='';}
+ catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
+ render();
 }
 function clearTransient(){lastResult=null;lastError='';feedback='';queryFeedback='';}
 function bind(){
  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();clearTransient();render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
- const ed=document.getElementById('sql'), note=document.getElementById('note');
- if(ed)ed.oninput=()=>{state.sql[state.stage]=ed.value;save();lastResult=null;lastError='';queryFeedback='';const rc=document.getElementById('resultCard');if(rc)rc.remove();const qf=document.getElementById('queryFeedback');if(qf)qf.remove();};
+ const note=document.getElementById('note');
  if(note)note.oninput=()=>{state.notes[state.stage]=note.value;save();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
  document.querySelectorAll('[data-decision]').forEach(el=>el.onchange=()=>{state.decision[el.dataset.decision]=el.value;save();render();});
 
  const runBtn=document.getElementById('run');
- if(runBtn)runBtn.onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';queryFeedback='';}catch(e){lastResult=null;lastError=friendlySqlError(e.message,ed.value,state.stage);queryFeedback='';}render();};
+ if(runBtn)runBtn.onclick=runCurrent;
 
  document.getElementById('hint').onclick=()=>{const i=state.hint[state.stage];state.hint[state.stage]=i===undefined?0:Math.min(i+1,curr().hints.length-1);save();render();};
  document.getElementById('solution').onclick=()=>{if(!state.solution[state.stage]&&state.hint[state.stage]===undefined&&!confirm('להציג את הפתרון המלא? כדאי קודם לנסות רמז ולהריץ ניסיון משלכם.'))return;state.solution[state.stage]=!state.solution[state.stage];save();render();};
 
+ const clearStage=document.getElementById('clearStage');
+ if(clearStage)clearStage.onclick=()=>{if(confirm('לנקות את ה-SQL, ההסבר, הרמז והפתרון של השלב הנוכחי? שאר ההתקדמות תישמר.')){delete state.sql[state.stage];delete state.notes[state.stage];delete state.hint[state.stage];delete state.solution[state.stage];state.completed=state.completed.filter(i=>i!==state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);save();clearTransient();render();}};
+
  const checkQueryNow=()=>{
+   const val=editorValue();
    try{
      if(curr().requireNote&&!(state.notes[state.stage]||'').trim()){
        queryFeedback='לפני שבודקים: רשמו קודם את התחזית/ההסבר שלכם בשדה למטה. אפשר להריץ ולחקור, אבל הבדיקה הסופית מחייבת לנסח מה אתם חושבים.';
        save();render();return;
      }
-     if(!ed.value.trim()){queryFeedback='כתבו שאילתת SQL לפני הבדיקה.';}
+     if(!val.trim()){queryFeedback='כתבו שאילתת SQL לפני הבדיקה.';}
      else if(state.stage===0){
-       const user=exec(ed.value);
+       const user=exec(val);
        queryFeedback='השאילתה תקינה ורצה. התקבלו '+user.values.length+' rows ו-'+user.columns.length+' columns. עכשיו השתמשו בנתונים כדי להסיק Grain ו-cardinality.';
      }else{
-       const user=exec(ed.value),exp=exec(curr().expected);
+       const user=exec(val),exp=exec(curr().expected);
        if(sameResultValues(user,exp)){
          queryFeedback=user.columns.join('|')===exp.columns.join('|')?'נכון. השאילתה מחזירה את התוצאה הצפויה.':'נכון. הערכים נכונים. שמות העמודות שונים מהפתרון, וזה לא פוסל את השאילתה.';
          if(!done(state.stage))state.completed.push(state.stage);
@@ -490,7 +585,7 @@ function bind(){
          queryFeedback=diagnoseResult(user,exp,state.stage);
        }
      }
-   }catch(e){queryFeedback='לא ניתן להריץ את השאילתה: '+friendlySqlError(e.message,ed.value,state.stage);}
+   }catch(e){queryFeedback='לא ניתן להריץ את השאילתה: '+friendlySqlError(e.message,val,state.stage);}
    save();render();
  };
  const checkQuery=document.getElementById('checkQuery');
@@ -506,6 +601,27 @@ function bind(){
  document.getElementById('skip').onclick=()=>{if(state.stage<STAGES.length-1){if(!done(state.stage)&&!skipped(state.stage)){state.skipped=state.skipped||[];state.skipped.push(state.stage);}state.stage++;save();clearTransient();render();}};
  document.getElementById('next').onclick=()=>{if(done(state.stage)&&state.stage<STAGES.length-1){state.stage++;save();clearTransient();render();}};
  document.getElementById('reset').onclick=()=>{if(confirm('לאפס את כל ההתקדמות והכתיבה?')){localStorage.removeItem(STORAGE_KEY);state=defaults();clearTransient();render();}};
+
+ const theme=document.getElementById('theme');
+ if(theme)theme.onclick=()=>{state.theme=state.theme==='dark'?'light':'dark';save();render();};
+
+ const exp=document.getElementById('export');
+ if(exp)exp.onclick=()=>{
+   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+   const url=URL.createObjectURL(blob);
+   const a=document.createElement('a');a.href=url;a.download='pulseboard-progress.json';a.click();
+   URL.revokeObjectURL(url);
+ };
+ const impBtn=document.getElementById('importBtn'),impFile=document.getElementById('importFile');
+ if(impBtn&&impFile){
+   impBtn.onclick=()=>impFile.click();
+   impFile.onchange=()=>{
+     const file=impFile.files[0];if(!file)return;
+     const r=new FileReader();
+     r.onload=()=>{try{const parsed=JSON.parse(r.result);state=migrateState(parsed);save();clearTransient();render();alert('ההתקדמות יובאה בהצלחה.');}catch(e){alert('קובץ לא תקין: '+e.message);}};
+     r.readAsText(file);
+   };
+ }
 }
 async function init(){
  try{
