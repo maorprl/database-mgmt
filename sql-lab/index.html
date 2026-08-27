@@ -116,7 +116,7 @@ project_memberships:{
 };
 
 const STAGES=[
-{title:"מה באמת מייצגת כל שורה?",short:"Grain ו-cardinality",eye:"פתיחת החקירה · מיפוי הנתונים",context:"צוות הכספים של PulseBoard טוען שמספרי החיוב בדשבורד לא עקביים. לפני שנוגעים במטריקה, צריך להבין מה כל relation מייצג. בשלב הזה ה-SQL הוא כלי חקירה: אתם מריצים שאילתה תקינה על כל relation, בוחנים את הרשומות, ואז מסיקים מה ה-Grain ומה סוג הקשר.",task:"כתבו והריצו SELECT על accounts. אחר כך החליפו בעצמכם את שם ה-relation ובדקו גם subscriptions, users, invoices ו-payments. רק אחרי שראיתם את הנתונים, מלאו למטה מה מייצגת שורה אחת בכל relation ומה סוג הקשר בין הישויות.",pred:"ה-SQL כאן אינו 'התשובה'. הוא הדרך שלכם לחקור את הנתונים. אל תנחשו לפי שם הטבלה — בדקו Primary Key, Foreign Key, UNIQUE וחזרות בפועל.",starter:"SELECT *\nFROM accounts;",expected:null,note:"בחרו את ה-Grain של כל relation ואת סוג הקשר: אחד לאחד, אחד לרבים או רבים לרבים.",hints:["איזו עמודה מזהה tuple באופן ייחודי?","האם account_id חוזר ב-users וב-invoices?","ב-subscriptions account_id הוא UNIQUE; ב-users וב-invoices הוא לא."],solution:"accounts: שורה לחשבון. subscriptions: שורה למינוי ולכל היותר אחת לחשבון. users: שורה למשתמש. invoices: שורה לחשבונית. payments: שורה לתשלום. account→users ו-account→invoices הם 1:M; invoice→payments הוא 1:M.",principle:"Grain = מה מייצגת שורה אחת."},
+{title:"מה באמת מייצגת כל שורה?",short:"Grain ו-cardinality",eye:"פתיחת החקירה · מיפוי הנתונים",context:"צוות הכספים של PulseBoard טוען שמספרי החיוב בדשבורד לא עקביים. לפני שנוגעים במטריקה, צריך להבין מה כל relation מייצג. בשלב הזה ה-SQL הוא כלי חקירה: אתם מריצים שאילתה תקינה על כל relation, בוחנים את הרשומות, ואז מסיקים מה ה-Grain ומה סוג הקשר.",task:"כתבו והריצו SELECT על accounts. אחר כך החליפו בעצמכם את שם ה-relation ובדקו גם subscriptions, users, invoices ו-payments. רק אחרי שראיתם את הנתונים, מלאו למטה מה מייצגת שורה אחת בכל relation ומה סוג הקשר בין הישויות.",pred:"ה-SQL כאן אינו 'התשובה'. הוא הדרך שלכם לחקור את הנתונים. אל תנחשו לפי שם הטבלה — בדקו Primary Key, Foreign Key, UNIQUE וחזרות בפועל.",starter:"",expected:null,note:"בחרו את ה-Grain של כל relation ואת סוג הקשר: אחד לאחד, אחד לרבים או רבים לרבים.",hints:["איזו עמודה מזהה tuple באופן ייחודי?","האם account_id חוזר ב-users וב-invoices?","ב-subscriptions account_id הוא UNIQUE; ב-users וב-invoices הוא לא."],solution:"accounts: שורה לחשבון. subscriptions: שורה למינוי ולכל היותר אחת לחשבון. users: שורה למשתמש. invoices: שורה לחשבונית. payments: שורה לתשלום. account→users ו-account→invoices הם 1:M; invoice→payments הוא 1:M.",principle:"Grain = מה מייצגת שורה אחת."},
 {title:"קובעים Baseline לפני JOIN",short:"Baseline",eye:"בקרה · לפני ה-JOIN הראשון",context:"כדי לזהות ניפוח בהמשך, צריך מספרי בקרה שלא תלויים ב-JOIN.",task:"החזירו בשורה אחת: מספר accounts, מספר invoices וסכום amount_due של כל החשבוניות.",starter:"SELECT\n  (SELECT COUNT(*) FROM accounts) AS account_count,\n  -- השלימו שתי בדיקות נוספות\n;",expected:"SELECT (SELECT COUNT(*) FROM accounts) account_count,(SELECT COUNT(*) FROM invoices) invoice_count,(SELECT SUM(amount_due) FROM invoices) issued_total;",note:"מה בדיוק סופר או מסכם כל מספר?",hints:["כל מספר מגיע מ-relation אחר.","צריך COUNT(*) על invoices ו-SUM(amount_due).","השתמשו ב-scalar subqueries."],solution:"SELECT (SELECT COUNT(*) FROM accounts) AS account_count, (SELECT COUNT(*) FROM invoices) AS invoice_count, (SELECT SUM(amount_due) FROM invoices) AS issued_total;",principle:"Baseline = נקודת בקרה לפני שינוי Grain."},
 {title:"מי חויב, מתי ובכמה?",short:"JOIN משנה Grain",eye:"JOIN ראשון · חזרות תקינות",context:"מנהלת הכספים רוצה שם account ליד כל invoice.",task:"הציגו account_name, invoice_id, issued_at ו-amount_due לכל invoice, לפי invoice_id.",pred:"מה יהיה ה-output Grain? האם account_name יכול לחזור בלי שזו כפילות?",starter:"SELECT a.account_name,i.invoice_id,i.issued_at,i.amount_due\nFROM accounts a\nJOIN invoices i ON -- השלימו\nORDER BY i.invoice_id;",expected:"SELECT a.account_name,i.invoice_id,i.issued_at,i.amount_due FROM accounts a JOIN invoices i ON i.account_id=a.account_id ORDER BY i.invoice_id;",note:"כתבו תחזית: כמה rows ומה מייצגת כל row?",hints:["איזו עמודה ב-invoices מצביעה על account?","השוו account_id משני הצדדים.","ON i.account_id = a.account_id"],solution:"SELECT a.account_name,i.invoice_id,i.issued_at,i.amount_due FROM accounts a JOIN invoices i ON i.account_id=a.account_id ORDER BY i.invoice_id;",principle:"JOIN 1:M מייצר שורה לכל match; חזרת entity אינה duplicate tuple."},
 {title:"לאילו accounts יש לפחות invoice paid אחת?",short:"קיום התאמה",eye:"EXISTS · שומרים account Grain",context:"צריך רשימת accounts, לא רשימת invoices. פרטי החשבונית לא דרושים.",task:"החזירו account_name פעם אחת לכל account שיש לו לפחות invoice אחת ב-status='paid'.",pred:"JOIN רגיל יוצר row לכל invoice תואמת. האם זה ה-Grain הרצוי?",starter:"SELECT a.account_name\nFROM accounts a\nWHERE -- בדקו קיום התאמה\nORDER BY a.account_name;",expected:"SELECT a.account_name FROM accounts a WHERE EXISTS (SELECT 1 FROM invoices i WHERE i.account_id=a.account_id AND i.status='paid') ORDER BY a.account_name;",note:"איזו יחידה אתם רוצים להחזיר?",hints:["ה-relation השני משמש רק כתנאי.","בדקו האם קיימת לפחות התאמה אחת.","השתמשו ב-EXISTS correlated."],solution:"SELECT a.account_name FROM accounts a WHERE EXISTS (SELECT 1 FROM invoices i WHERE i.account_id=a.account_id AND i.status='paid') ORDER BY a.account_name;",principle:"EXISTS בודק קיום בלי לייצר matching rows בתוצאה."},
@@ -131,7 +131,8 @@ const STAGES=[
 ];
 
 let db=null, dbError='', preview='accounts';
-const defaults=()=>({stage:0,sql:{},notes:{},completed:[],hint:{},solution:{},structured:{grain:{},card:{}}});
+const APP_STATE_VERSION=3;
+const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],hint:{},solution:{},structured:{grain:{},card:{}}});
 let state=load();
 function load(){try{
  const d=defaults(),x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
@@ -140,8 +141,12 @@ function load(){try{
  out.structured.grain=out.structured.grain||{};
  out.structured.card=out.structured.card||{};
  if(out.structured.card.acc_sub==="1:0..1")out.structured.card.acc_sub="1:1";
- const oldStage0="SELECT * FROM accounts;\n\n-- החליפו את שם הטבלה כדי לבדוק relations נוספים";
- if(out.sql&&out.sql[0]===oldStage0) out.sql[0]="SELECT *\nFROM accounts;";
+ if((x.version||0)<APP_STATE_VERSION){
+   out.sql=out.sql||{};
+   out.sql[0]="";
+   out.version=APP_STATE_VERSION;
+   localStorage.setItem(STORAGE_KEY,JSON.stringify(out));
+ }
  return out;
 }catch(e){return defaults();}}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
@@ -237,8 +242,8 @@ function render(){
  '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+(!allowed(i)?'locked':'')+'" data-step="'+i+'" '+(!allowed(i)?'disabled':'')+'><span class="n">'+(done(i)?'✓':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+esc(s.context)+'</div><div class="task"><b>המשימה</b><br>'+esc(s.task)+'</div>'+(s.pred?'<div class="prediction"><b>לפני ההרצה:</b> '+esc(s.pred)+'</div>':'')+'</article>'+
- '<section class="editor"><div class="editorhead"><b>'+(state.stage===0?'SQL inspection · אתם כותבים ומריצים':'SQL editor · SQLite')+'</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button></div></section>'+
- ((lastResult||lastError)?'<section class="card result"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
+ '<section class="editor"><div class="editorhead"><b>'+(state.stage===0?'SQL inspection · אתם כותבים ומריצים':'SQL editor · SQLite')+'</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false" placeholder="'+(state.stage===0?'כתבו כאן SELECT ... FROM ...':'')+'">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button></div></section>'+
+ ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
  '<section class="card reason"><label>'+(state.stage===0?'תשובה מובנית':'הסבר / תחזית')+'</label><small>'+esc(s.note)+'</small>'+(state.stage===0?structuredHtml():'<textarea id="note">'+esc(state.notes[state.stage]||'')+'</textarea>')+'<div class="actions"><button class="check" id="check">בדוק תשובה</button><button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button></div>'+
  (state.hint[state.stage]!==undefined?'<div class="hintbox">'+esc(s.hints[state.hint[state.stage]])+'</div>':'')+
  (feedback?'<div class="feedback '+(feedback.startsWith('נכון')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+
@@ -254,11 +259,11 @@ function bind(){
  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();lastResult=null;lastError='';feedback='';render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
  const ed=document.getElementById('sql'), note=document.getElementById('note');
- ed.oninput=()=>{state.sql[state.stage]=ed.value;save();};
+ ed.oninput=()=>{state.sql[state.stage]=ed.value;save();lastResult=null;lastError='';const rc=document.getElementById('resultCard');if(rc)rc.remove();};
  if(note) note.oninput=()=>{state.notes[state.stage]=note.value;save();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
- document.getElementById('run').onclick=()=>{try{lastResult=exec(ed.value);lastError='';}catch(e){lastResult=null;lastError=e.message;}render();};
+ document.getElementById('run').onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';}catch(e){lastResult=null;lastError=e.message;}render();};
  document.getElementById('hint').onclick=()=>{const i=state.hint[state.stage];state.hint[state.stage]=i===undefined?0:Math.min(i+1,curr().hints.length-1);save();render();};
  document.getElementById('solution').onclick=()=>{state.solution[state.stage]=!state.solution[state.stage];save();render();};
  document.getElementById('check').onclick=()=>{
