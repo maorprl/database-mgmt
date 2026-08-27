@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lab</title>
+<style>
+:root{font-family:Arial,"Noto Sans Hebrew",sans-serif;color:#14251d;background:#f3f5f1}*{box-sizing:border-box}body{margin:0}.wrap{max-width:900px;margin:0 auto;padding:56px 20px}.card{background:#fff;border:1px solid #dce3dc;border-radius:20px;padding:32px;box-shadow:0 8px 24px rgba(25,55,43,.06)}h1{margin:0 0 10px;font-size:36px}p{line-height:1.7;color:#64746b}.badge{display:inline-block;background:#e4f4ea;color:#23704f;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800}.progress{margin:28px 0 12px}.track{height:10px;background:#e4e9e5;border-radius:999px;overflow:hidden}.fill{height:100%;background:#e96f47;width:0}.row{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}button{border:0;border-radius:11px;padding:12px 18px;font-weight:800;cursor:pointer}.primary{background:#173d30;color:white}.ghost{background:#eef2ef;color:#496056}.note{font-size:13px;margin-top:20px;color:#7c8b83}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<span class="badge">SQL LAB</span>
+<h1>מעבדת SQL ואלגברה רלציונית</h1>
+<p>האתר שומר את ההתקדמות שלך בדפדפן, כך שלא תצטרך להתחיל מחדש בכל כניסה.</p>
+<div class="progress"><b id="label">התקדמות: 0%</b><div class="track"><div id="fill" class="fill"></div></div></div>
+<div class="row"><button class="primary" id="continue">המשך מהנקודה האחרונה</button><button class="ghost" id="reset">אפס התקדמות</button></div>
+<p class="note">גרסת הכניסה לאתר. קובץ PulseBoard המלא יוכל להחליף את הדף הזה באותו נתיב בלי לשנות את הכתובת.</p>
+</div></div>
+<script>
+const KEY='sql-lab-progress-v1';
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{"step":0,"total":12}')}catch{return {step:0,total:12}}}
+function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+function render(){const s=load(), pct=Math.round((s.step/s.total)*100);document.getElementById('label').textContent=`התקדמות: ${pct}% · שלב ${s.step} מתוך ${s.total}`;document.getElementById('fill').style.width=pct+'%'}
+document.getElementById('continue').onclick=()=>{const s=load(); if(s.step<s.total)s.step++; save(s); render()};
+document.getElementById('reset').onclick=()=>{localStorage.removeItem(KEY);render()};
+render();
+</script>
+</body></html>
