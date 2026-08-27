@@ -38,7 +38,7 @@
 .topbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ghostbtn{border:1px solid var(--line);background:white;border-radius:9px;padding:9px 11px;font-weight:800;cursor:pointer;color:var(--ink)}
 .clearbtn{border:1px dashed var(--line);background:#f8faf8;color:#6c756f;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer}
-.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
+.relation-toggle{width:100%;margin-top:10px;border:1px solid var(--line);background:#f8faf8;color:#42564c;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer}.relation-lock{margin-top:10px}.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
 #cmwrap .CodeMirror{height:260px;font:13px/1.7 Consolas,monospace;direction:ltr;text-align:left;background:#10241c;color:#e8f0eb}
 #cmwrap .CodeMirror-gutters{background:#10241c;border-right:1px solid rgba(255,255,255,.1)}
 #cmwrap .CodeMirror-linenumber{color:#73877c}
@@ -52,7 +52,7 @@
 :root[data-theme="dark"] .card{background:#152019;border-color:var(--line)}
 :root[data-theme="dark"] .top{background:rgba(15,26,21,.97)}
 :root[data-theme="dark"] .task,:root[data-theme="dark"] .subq,:root[data-theme="dark"] .joinchain,:root[data-theme="dark"] .schema-note,:root[data-theme="dark"] .data-preview .tablewrap{background:#18241d;border-color:var(--line)}
-:root[data-theme="dark"] .ghostbtn,:root[data-theme="dark"] .reset,:root[data-theme="dark"] .nav button,:root[data-theme="dark"] .hintbtn,:root[data-theme="dark"] .solutionbtn,:root[data-theme="dark"] .clearbtn{background:#18241d;color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .ghostbtn,:root[data-theme="dark"] .reset,:root[data-theme="dark"] .nav button,:root[data-theme="dark"] .hintbtn,:root[data-theme="dark"] .solutionbtn,:root[data-theme="dark"] .clearbtn,:root[data-theme="dark"] .relation-toggle{background:#18241d;color:var(--ink);border-color:var(--line)}
 :root[data-theme="dark"] th{background:#1c2a22;color:#cfe0d7}
 :root[data-theme="dark"] td{border-color:#243229}
 :root[data-theme="dark"] .schema button{background:#1c2a22;color:#cfe0d7}
@@ -187,8 +187,8 @@ const FK_EDGES=[
 ];
 
 let db=null, dbError='', preview='accounts';
-const APP_STATE_VERSION=7;
-const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}},theme:'light'});
+const APP_STATE_VERSION=8;
+const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{}});
 let state=load();
 function migrateState(x){
  const out=Object.assign(defaults(),x||{});
@@ -197,6 +197,8 @@ function migrateState(x){
  out.structured.card=out.structured.card||{};
  out.decision=(x&&x.decision)||{};
  out.skipped=out.skipped||[];
+ out.attempted=Array.isArray(out.attempted)?out.attempted:[];
+ out.graphOpen=out.graphOpen||{};
  out.theme=out.theme==='dark'?'dark':'light';
  if(out.structured.card.acc_sub==="1:0..1")out.structured.card.acc_sub="1:1";
  const v=((x&&x.version)||0);
@@ -229,6 +231,8 @@ function skipped(i){return (state.skipped||[]).includes(i);}
 function passed(i){return done(i)||skipped(i);}
 function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!passed(i))return i;return STAGES.length-1;}
 function allowed(i){return i<=firstIncomplete();}
+function relationGraphUnlocked(){return done(state.stage)||state.attempted.includes(state.stage)||state.hint[state.stage]!==undefined;}
+function relationGraphOpen(){return !!state.graphOpen[state.stage];}
 function norm(r){if(!r)return'';return JSON.stringify([r.columns,r.values.map(x=>x.map(v=>v===null?null:v)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))]);}
 function rowKey(row){return JSON.stringify(row.map(v=>v===null?null:v));}
 function sortedRowKeys(r){return (r&&r.values?r.values:[]).map(rowKey).sort();}
@@ -516,7 +520,7 @@ function render(){
  '</section>'+
  '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="skip" id="skip" '+(state.stage===STAGES.length-1?'disabled':'')+'>דלג לשלב הבא ↷</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
  '</section>'+
- '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div>'+Object.keys(TABLES).map(t=>'<button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>').join('')+'</div>'+schemaGraphHtml()+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr">'+esc(a)+'</td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview)+'</div></section><section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+(STAGES.filter((x,i)=>done(i)).length?STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join(''):'<li style="color:#9aa79f">עוד לא הושלמו שלבים.</li>')+'</ul></section></aside>'+
+ '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div>'+Object.keys(TABLES).map(t=>'<button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>').join('')+'</div>'+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr">'+esc(a)+'</td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview)+'</div></section><section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+(STAGES.filter((x,i)=>done(i)).length?STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join(''):'<li style="color:#9aa79f">עוד לא הושלמו שלבים.</li>')+'</ul></section></aside>'+
  '</main>';
  mountEditor();
  applyTheme();
@@ -541,6 +545,8 @@ function invalidateResult(){
 function runCurrent(){
  const val=editorValue();
  if(!val.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}
+ if(!state.attempted.includes(state.stage))state.attempted.push(state.stage);
+ save();
  try{lastResult=exec(val);lastError='';queryFeedback='';}
  catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
  render();
@@ -554,6 +560,8 @@ function bind(){
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
  document.querySelectorAll('[data-decision]').forEach(el=>el.onchange=()=>{state.decision[el.dataset.decision]=el.value;save();render();});
+ const toggleRelations=document.getElementById('toggleRelations');
+ if(toggleRelations)toggleRelations.onclick=()=>{state.graphOpen[state.stage]=!relationGraphOpen();save();render();};
 
  const runBtn=document.getElementById('run');
  if(runBtn)runBtn.onclick=runCurrent;
@@ -562,7 +570,7 @@ function bind(){
  document.getElementById('solution').onclick=()=>{if(!state.solution[state.stage]&&state.hint[state.stage]===undefined&&!confirm('להציג את הפתרון המלא? כדאי קודם לנסות רמז ולהריץ ניסיון משלכם.'))return;state.solution[state.stage]=!state.solution[state.stage];save();render();};
 
  const clearStage=document.getElementById('clearStage');
- if(clearStage)clearStage.onclick=()=>{if(confirm('לנקות את ה-SQL, ההסבר, הרמז והפתרון של השלב הנוכחי? שאר ההתקדמות תישמר.')){delete state.sql[state.stage];delete state.notes[state.stage];delete state.hint[state.stage];delete state.solution[state.stage];state.completed=state.completed.filter(i=>i!==state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);save();clearTransient();render();}};
+ if(clearStage)clearStage.onclick=()=>{if(confirm('לנקות את ה-SQL, ההסבר, הרמז והפתרון של השלב הנוכחי? שאר ההתקדמות תישמר.')){delete state.sql[state.stage];delete state.notes[state.stage];delete state.hint[state.stage];delete state.solution[state.stage];delete state.graphOpen[state.stage];state.attempted=(state.attempted||[]).filter(i=>i!==state.stage);state.completed=state.completed.filter(i=>i!==state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);save();clearTransient();render();}};
 
  const checkQueryNow=()=>{
    const val=editorValue();
@@ -571,6 +579,7 @@ function bind(){
        queryFeedback='לפני שבודקים: רשמו קודם את התחזית/ההסבר שלכם בשדה למטה. אפשר להריץ ולחקור, אבל הבדיקה הסופית מחייבת לנסח מה אתם חושבים.';
        save();render();return;
      }
+     if(val.trim()&&!state.attempted.includes(state.stage))state.attempted.push(state.stage);
      if(!val.trim()){queryFeedback='כתבו שאילתת SQL לפני הבדיקה.';}
      else if(state.stage===0){
        const user=exec(val);
