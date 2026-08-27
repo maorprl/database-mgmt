@@ -159,6 +159,75 @@ function passed(i){return done(i)||skipped(i);}
 function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!passed(i))return i;return STAGES.length-1;}
 function allowed(i){return i<=firstIncomplete();}
 function norm(r){if(!r)return'';return JSON.stringify([r.columns,r.values.map(x=>x.map(v=>v===null?null:v)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))]);}
+function rowKey(row){return JSON.stringify(row.map(v=>v===null?null:v));}
+function sortedRowKeys(r){return (r&&r.values?r.values:[]).map(rowKey).sort();}
+function sameResultValues(a,b){
+ if(!a||!b||a.columns.length!==b.columns.length)return false;
+ const av=sortedRowKeys(a),bv=sortedRowKeys(b);
+ return av.length===bv.length&&av.every((x,i)=>x===bv[i]);
+}
+function duplicateRows(r){
+ const seen=new Map(),dups=[];
+ (r&&r.values?r.values:[]).forEach(row=>{const k=rowKey(row);seen.set(k,(seen.get(k)||0)+1);});
+ seen.forEach((n,k)=>{if(n>1)dups.push({row:JSON.parse(k),count:n});});
+ return dups;
+}
+function multisetDiff(a,b){
+ const counts=new Map();
+ b.forEach(k=>counts.set(k,(counts.get(k)||0)+1));
+ const extra=[];
+ a.forEach(k=>{const n=counts.get(k)||0;if(n)counts.set(k,n-1);else extra.push(k);});
+ const missing=[];
+ counts.forEach((n,k)=>{for(let i=0;i<n;i++)missing.push(k);});
+ return {extra,missing};
+}
+function formatRowKey(k){
+ try{return JSON.parse(k).map(v=>v===null?'NULL':String(v)).join(' | ');}
+ catch(e){return k;}
+}
+const STAGE_DIAGNOSTIC_TIPS=[
+ "",
+ "המשימה מבקשת שורה אחת ובה שלושה מדדים. כל מדד מחושב מה-relation המתאים.",
+ "ה-output Grain צריך להיות invoice. אם מספר השורות אינו תואם למספר ה-invoices, בדקו את תנאי ה-JOIN.",
+ "ה-output Grain צריך להישאר account. אם account מופיע כמה פעמים, כנראה יצרתם matching rows במקום לבדוק קיום.",
+ "התחילו מ-accounts ובדקו עבור כל account שאין לו שום התאמה ב-invoices.",
+ "אם account ללא invoice נספר כ-1, בדקו COUNT(i.invoice_id) במקום COUNT(*). אם הסכום הוא NULL, בדקו COALESCE.",
+ "זכרו: COUNT(*) סופר rows; COUNT(method) סופר רק non-NULL; COUNT(DISTINCT method) סופר ערכים שונים שאינם NULL.",
+ "הדרישה היא על סכום של group, לכן הסינון צריך לקרות אחרי הקיבוץ.",
+ "שורה אחת בתוצאה צריכה לייצג חודש אחד. עמודת הקיבוץ היא issue_month.",
+ "project_memberships הוא relation של הקשר. ב-LEFT JOIN ספרו project_id אמיתי/ייחודי, לא את שורת ה-NULL.",
+ "יש כאן 1:M × 1:M. אם המספרים מנופחים, צמצמו כל child ל-row אחת לכל account לפני שמחברים.",
+ "payments נדרש למדד עצמו; paid ו-open הם תנאי קיום/היעדר. הפרידו בין relations שמייצרים את המדד לבין relations שמשמשים כתנאי."
+];
+function friendlySqlError(msg){
+ const m=String(msg||'');
+ if(/near ";": syntax error/i.test(m))return "יש שגיאת תחביר ממש לפני ;. בדקו אם נשאר פסיק, WHERE/ON/GROUP BY לא גמור, או ביטוי שחסר לפני סוף השאילתה.";
+ if(/no such column:/i.test(m))return "SQLite לא מוצא אחת העמודות. בדקו את שם ה-attribute ב-Schema ואת ה-alias של הטבלה. ("+m+")";
+ if(/ambiguous column name:/i.test(m))return "שם עמודה אינו חד-משמעי כי הוא קיים ביותר מטבלה אחת. הוסיפו alias, למשל a.account_id. ("+m+")";
+ if(/no such table:/i.test(m))return "SQLite לא מוצא את ה-relation הזה. בדקו את שם הטבלה ב-Schema. ("+m+")";
+ if(/syntax error/i.test(m))return "יש שגיאת תחביר ב-SQL. SQLite אומר: "+m;
+ return m;
+}
+function diagnoseResult(user,exp,stage){
+ const parts=[];
+ if(user.columns.length!==exp.columns.length){
+   parts.push("מספר העמודות שונה: קיבלתם "+user.columns.length+", והמשימה מצפה ל-"+exp.columns.length+".");
+   parts.push("העמודות שהתוצאה הצפויה מייצגת: "+exp.columns.join(", ")+".");
+ }else if(user.values.length!==exp.values.length){
+   parts.push("מספר השורות שונה: קיבלתם "+user.values.length+", והפלט הצפוי מכיל "+exp.values.length+".");
+ }
+ const dups=duplicateRows(user), expDups=duplicateRows(exp);
+ if(dups.length&&!expDups.length){
+   parts.push("יש אצלכם שורות זהות שחוזרות. לדוגמה: "+dups.slice(0,1).map(x=>x.row.map(v=>v===null?'NULL':v).join(" | ")+" ("+x.count+" פעמים)").join("")+".");
+ }
+ if(user.columns.length===exp.columns.length){
+   const diff=multisetDiff(sortedRowKeys(user),sortedRowKeys(exp));
+   if(diff.missing.length)parts.push("חסרה למשל שורה: "+formatRowKey(diff.missing[0])+".");
+   if(diff.extra.length)parts.push("יש למשל שורה שלא אמורה להיות: "+formatRowKey(diff.extra[0])+".");
+ }
+ if(STAGE_DIAGNOSTIC_TIPS[stage])parts.push("כיוון: "+STAGE_DIAGNOSTIC_TIPS[stage]);
+ return parts.join(" ");
+}
 function exec(sql){const rs=db.exec(sql);if(!rs.length)return {columns:['status'],values:[['OK']]};return rs[rs.length-1];}
 function resultHtml(r){if(!r)return'';return '<div class="tablewrap"><table><thead><tr>'+r.columns.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+r.values.map(row=>'<tr>'+row.map(v=>'<td>'+(v===null?'<em>NULL</em>':esc(v))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
 function previewDataHtml(table){
@@ -171,7 +240,7 @@ function previewDataHtml(table){
    return '<div class="schema-note">לא ניתן לטעון preview.</div>';
  }
 }
-let lastResult=null,lastError='',feedback='';
+let lastResult=null,lastError='',feedback='',queryFeedback='';
 
 const GRAIN_OPTIONS=[
   ["","בחרו..."],["account","חשבון אחד"],["subscription","מינוי אחד"],["user","משתמש אחד"],["invoice","חשבונית אחת"],["payment","תשלום אחד"]
@@ -256,6 +325,7 @@ function render(){
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+esc(s.context)+'</div><div class="task"><b>המשימה</b><br>'+esc(s.task)+'</div>'+(s.pred?'<div class="prediction"><b>לפני ההרצה:</b> '+esc(s.pred)+'</div>':'')+'</article>'+
  '<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button>'+'<button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button>'+'</div></div></section>'+
  ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
+ (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')?'ok':'bad')+'">'+esc(queryFeedback)+'</div>':'')+
  '<section class="card reason"><label>'+(state.stage===0?'תשובה מובנית':'הסבר / תחזית')+'</label><small>'+esc(s.note)+'</small>'+(state.stage===0?structuredHtml():'<textarea id="note">'+esc(state.notes[state.stage]||'')+'</textarea>')+'<div class="actions">'+(state.stage===0?'<button class="check" id="check">בדוק תשובה</button>':'')+'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button></div>'+
  (state.hint[state.stage]!==undefined?'<div class="hintbox">'+esc(s.hints[state.hint[state.stage]])+'</div>':'')+
  (feedback?'<div class="feedback '+(feedback.startsWith('נכון')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+
@@ -268,43 +338,50 @@ function render(){
  bind();
 }
 function bind(){
- document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();lastResult=null;lastError='';feedback='';render();});
+ document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();lastResult=null;lastError='';feedback='';queryFeedback='';render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
  const ed=document.getElementById('sql'), note=document.getElementById('note');
- ed.oninput=()=>{state.sql[state.stage]=ed.value;save();lastResult=null;lastError='';const rc=document.getElementById('resultCard');if(rc)rc.remove();};
+ ed.oninput=()=>{state.sql[state.stage]=ed.value;save();lastResult=null;lastError='';queryFeedback='';const rc=document.getElementById('resultCard');if(rc)rc.remove();const qf=document.getElementById('queryFeedback');if(qf)qf.remove();};
  if(note) note.oninput=()=>{state.notes[state.stage]=note.value;save();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
- document.getElementById('run').onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';}catch(e){lastResult=null;lastError=e.message;}render();};
+ document.getElementById('run').onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';queryFeedback='';}catch(e){lastResult=null;lastError=friendlySqlError(e.message);queryFeedback='';}render();};
  document.getElementById('hint').onclick=()=>{const i=state.hint[state.stage];state.hint[state.stage]=i===undefined?0:Math.min(i+1,curr().hints.length-1);save();render();};
  document.getElementById('solution').onclick=()=>{state.solution[state.stage]=!state.solution[state.stage];save();render();};
- const doCheck=()=>{
+ const checkQueryNow=()=>{
    try{
-     if(state.stage===0){
-       if(!ed.value.trim()){feedback='כתבו שאילתת SQL לפני הבדיקה.';}
-       else{
-         const user=exec(ed.value);
-         feedback='השאילתה תקינה ורצה. עכשיו השתמשו בתוצאה כדי לענות על ה-Grain וה-cardinality למטה.';
-       }
+     if(!ed.value.trim()){queryFeedback='כתבו שאילתת SQL לפני הבדיקה.';}
+     else if(state.stage===0){
+       const user=exec(ed.value);
+       queryFeedback='השאילתה תקינה ורצה. התקבלו '+user.values.length+' rows ו-'+user.columns.length+' columns. עכשיו השתמשו בנתונים כדי להסיק Grain ו-cardinality.';
      }else{
-       if(!ed.value.trim()){feedback='כתבו שאילתת SQL לפני הבדיקה.';}
-       else{
-         const user=exec(ed.value), exp=exec(curr().expected);
-         if(norm(user)===norm(exp)){feedback='נכון. השאילתה מחזירה את התוצאה הצפויה.';if(!done(state.stage))state.completed.push(state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);}
-         else feedback='עדיין לא. תוצאת השאילתה שונה מהתוצאה הצפויה.';
+       const user=exec(ed.value),exp=exec(curr().expected);
+       if(sameResultValues(user,exp)){
+         queryFeedback=user.columns.join('|')===exp.columns.join('|')
+           ?'נכון. השאילתה מחזירה את התוצאה הצפויה.'
+           :'נכון. הערכים נכונים. שמות העמודות שונים מהפתרון, וזה לא פוסל את השאילתה.';
+         if(!done(state.stage))state.completed.push(state.stage);
+         state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);
+       }else{
+         queryFeedback=diagnoseResult(user,exp,state.stage);
        }
      }
-   }catch(e){feedback='לא ניתן לבדוק עדיין: '+e.message;}
+   }catch(e){queryFeedback='לא ניתן להריץ את השאילתה: '+friendlySqlError(e.message);}
    save();render();
  };
- const checkAnswer=document.getElementById('check');
- if(checkAnswer)checkAnswer.onclick=doCheck;
  const checkQuery=document.getElementById('checkQuery');
- if(checkQuery)checkQuery.onclick=doCheck;
- document.getElementById('prev').onclick=()=>{if(state.stage>0){state.stage--;save();lastResult=null;lastError='';feedback='';render();}};
- document.getElementById('skip').onclick=()=>{if(state.stage<STAGES.length-1){if(!done(state.stage)&&!skipped(state.stage)){state.skipped=state.skipped||[];state.skipped.push(state.stage);}state.stage++;save();lastResult=null;lastError='';feedback='';render();}};
- document.getElementById('next').onclick=()=>{if(done(state.stage)&&state.stage<STAGES.length-1){state.stage++;save();lastResult=null;lastError='';feedback='';render();}};
- document.getElementById('reset').onclick=()=>{if(confirm('לאפס את כל ההתקדמות והכתיבה?')){localStorage.removeItem(STORAGE_KEY);state=defaults();lastResult=null;lastError='';feedback='';render();}};
+ if(checkQuery)checkQuery.onclick=checkQueryNow;
+ const checkAnswer=document.getElementById('check');
+ if(checkAnswer)checkAnswer.onclick=()=>{
+   const r=checkStructured();
+   feedback=r.msg;
+   if(r.ok){if(!done(0))state.completed.push(0);state.skipped=(state.skipped||[]).filter(i=>i!==0);}
+   save();render();
+ };
+ document.getElementById('prev').onclick=()=>{if(state.stage>0){state.stage--;save();lastResult=null;lastError='';feedback='';queryFeedback='';render();}};
+ document.getElementById('skip').onclick=()=>{if(state.stage<STAGES.length-1){if(!done(state.stage)&&!skipped(state.stage)){state.skipped=state.skipped||[];state.skipped.push(state.stage);}state.stage++;save();lastResult=null;lastError='';feedback='';queryFeedback='';render();}};
+ document.getElementById('next').onclick=()=>{if(done(state.stage)&&state.stage<STAGES.length-1){state.stage++;save();lastResult=null;lastError='';feedback='';queryFeedback='';render();}};
+ document.getElementById('reset').onclick=()=>{if(confirm('לאפס את כל ההתקדמות והכתיבה?')){localStorage.removeItem(STORAGE_KEY);state=defaults();lastResult=null;lastError='';feedback='';queryFeedback='';render();}};
 }
 async function init(){
  try{
