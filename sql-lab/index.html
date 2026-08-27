@@ -24,7 +24,7 @@
 .answer-exp b{font-weight:900}
 .subq{padding:14px;border:1px solid #e4e9e5;border-radius:12px;background:#fafbf9}.subq p{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.55}.divider{height:1px;background:#e7ebe7}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.check,.hintbtn,.solutionbtn{border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}.check{border:0;background:var(--green);color:white}.hintbtn,.solutionbtn{border:1px solid var(--line);background:white}.feedback{margin-top:13px;padding:12px;border-radius:10px;line-height:1.6}.ok{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}.bad{background:#fff5f1;border:1px solid #efc9bc;color:#864b38}.hintbox,.solutionbox{margin-top:12px;padding:12px;border-radius:10px}.hintbox{background:#fffaf0;border:1px solid #ead8aa;color:#74633f}.solutionbox{background:#f8faf8;border:1px solid var(--line)}.solutionbox pre{direction:ltr;text-align:left;white-space:pre-wrap;background:#17251f;color:#e6eee9;padding:12px;border-radius:8px;overflow:auto}
-.nav{display:flex;justify-content:space-between}.nav button{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer}.nav .next{background:var(--green);color:white}.nav button:disabled{opacity:.4}
+.nav{display:flex;justify-content:space-between}.nav button{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer}.nav .next{background:var(--green);color:white}.nav .skip{border-style:dashed;color:#6c756f;background:#f8faf8}.nav button:disabled{opacity:.4}
 .side{position:sticky;top:88px;height:max-content;display:flex;flex-direction:column;gap:14px}.side .card{padding:16px}.side h3{font-size:12px;margin:0 0 10px;color:#4c685a}.schema button{border:0;background:#eef3ef;border-radius:8px;padding:7px 9px;margin:3px;font:11px Consolas;cursor:pointer}.schema button.sel{background:var(--green);color:white}.schemabox{margin-top:10px;font:11px/1.65 Consolas;direction:ltr;text-align:left;color:#53645b}.schema-table{width:100%;border-collapse:collapse;margin-top:10px;direction:ltr;text-align:left;font-size:11px}.schema-table th,.schema-table td{padding:7px 5px;border-bottom:1px solid #e8ece8;vertical-align:top}.schema-table th{color:#6b7b72;font-weight:800}.schema-table .attr{font-family:Consolas,monospace;font-weight:800;color:#31483d}.schema-table .domain{direction:rtl;text-align:right;color:#5c6e64;font-family:Arial,"Noto Sans Hebrew",sans-serif}.schema-note{margin-top:10px;padding:9px 10px;background:#f5f7f4;border-radius:9px;color:#66766d;font-size:11px;line-height:1.55}.principles ul{padding-right:18px;margin:0}.principles li{font-size:12px;line-height:1.6;color:#607168;margin:5px 0}
 @media(max-width:1050px){.layout{grid-template-columns:220px 1fr}.side{grid-column:2;position:static;display:grid;grid-template-columns:1fr 1fr}.top{grid-template-columns:1fr auto}.progress{display:none}}
 @media(max-width:760px){.layout{display:block;padding:12px}.steps,.side{position:static;margin-bottom:12px}.steps{max-height:none}.steps nav{display:flex;overflow:auto}.step{min-width:175px}.hero h2{font-size:24px}.top{padding:12px}.top h1{font-size:16px}.side{display:block}.side .card{margin-top:12px}}
@@ -132,7 +132,7 @@ const STAGES=[
 
 let db=null, dbError='', preview='accounts';
 const APP_STATE_VERSION=3;
-const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],hint:{},solution:{},structured:{grain:{},card:{}}});
+const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],skipped:[],hint:{},solution:{},structured:{grain:{},card:{}}});
 let state=load();
 function load(){try{
  const d=defaults(),x=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
@@ -154,7 +154,9 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;',
 function curr(){return STAGES[state.stage];}
 function sqlText(){return state.sql[state.stage]===undefined?curr().starter:state.sql[state.stage];}
 function done(i){return state.completed.includes(i);}
-function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!done(i))return i;return STAGES.length-1;}
+function skipped(i){return (state.skipped||[]).includes(i);}
+function passed(i){return done(i)||skipped(i);}
+function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!passed(i))return i;return STAGES.length-1;}
 function allowed(i){return i<=firstIncomplete();}
 function norm(r){if(!r)return'';return JSON.stringify([r.columns,r.values.map(x=>x.map(v=>v===null?null:v)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))]);}
 function exec(sql){const rs=db.exec(sql);if(!rs.length)return {columns:['status'],values:[['OK']]};return rs[rs.length-1];}
@@ -239,7 +241,7 @@ function render(){
  '<div class="progress"><div class="progline"><span>'+state.completed.length+' מתוך '+STAGES.length+' הושלמו</span><span>'+pct+'%</span></div><div class="track"><span style="width:'+pct+'%"></span></div></div>'+
  '<button class="reset" id="reset">איפוס</button></header>'+
  '<main class="layout">'+
- '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+(!allowed(i)?'locked':'')+'" data-step="'+i+'" '+(!allowed(i)?'disabled':'')+'><span class="n">'+(done(i)?'✓':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+'</small></span></button>').join('')+'</nav></aside>'+
+ '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+(!allowed(i)?'locked':'')+'" data-step="'+i+'" '+(!allowed(i)?'disabled':'')+'><span class="n">'+(done(i)?'✓':skipped(i)?'↷':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+(skipped(i)?' · דולג':'')+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+esc(s.context)+'</div><div class="task"><b>המשימה</b><br>'+esc(s.task)+'</div>'+(s.pred?'<div class="prediction"><b>לפני ההרצה:</b> '+esc(s.pred)+'</div>':'')+'</article>'+
  '<section class="editor"><div class="editorhead"><b>'+(state.stage===0?'SQL inspection · אתם כותבים ומריצים':'SQL editor · SQLite')+'</b><span>'+(db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…'))+'</span></div><textarea id="sql" spellcheck="false" placeholder="'+(state.stage===0?'כתבו כאן SELECT ... FROM ...':'')+'">'+esc(sqlText())+'</textarea><div class="editorfoot"><span>'+(state.stage===0?'הריצו relation אחד בכל פעם · הכתיבה נשמרת אוטומטית':'נשמר אוטומטית בכל הקלדה')+'</span><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button></div></section>'+
@@ -249,7 +251,7 @@ function render(){
  (feedback?'<div class="feedback '+(feedback.startsWith('נכון')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+
  (state.solution[state.stage]?'<div class="solutionbox"><b>פתרון מוצע</b><pre>'+esc(s.solution)+'</pre><p><b>עיקרון:</b> '+esc(s.principle)+'</p></div>':'')+
  '</section>'+
- '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
+ '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="skip" id="skip" '+(state.stage===STAGES.length-1?'disabled':'')+'>דלג לשלב הבא ↷</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
  '</section>'+
  '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div>'+Object.keys(TABLES).map(t=>'<button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>').join('')+'</div><table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr">'+esc(a)+'</td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div></section><section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join('')+'</ul></section></aside>'+
  '</main>';
@@ -271,16 +273,17 @@ function bind(){
      if(state.stage===0){
        const r=checkStructured();
        feedback=r.msg;
-       if(r.ok&&!done(0))state.completed.push(0);
+       if(r.ok){if(!done(0))state.completed.push(0);state.skipped=(state.skipped||[]).filter(i=>i!==0);}
      }else{
        const user=exec(ed.value), exp=exec(curr().expected);
-       if(norm(user)===norm(exp)){feedback='נכון. התוצאה שומרת על יחידת הניתוח שהמשימה דורשת.';if(!done(state.stage))state.completed.push(state.stage);}
+       if(norm(user)===norm(exp)){feedback='נכון. התוצאה שומרת על יחידת הניתוח שהמשימה דורשת.';if(!done(state.stage))state.completed.push(state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);}
        else feedback='לא עדיין. התוצאה שונה מהתוצאה הצפויה. בדקו קודם מה מייצגת כל row ואז השתמשו ברמז.';
      }
    }catch(e){feedback='לא ניתן לבדוק עדיין: '+e.message;}
    save();render();
  };
  document.getElementById('prev').onclick=()=>{if(state.stage>0){state.stage--;save();lastResult=null;lastError='';feedback='';render();}};
+ document.getElementById('skip').onclick=()=>{if(state.stage<STAGES.length-1){if(!done(state.stage)&&!skipped(state.stage)){state.skipped=state.skipped||[];state.skipped.push(state.stage);}state.stage++;save();lastResult=null;lastError='';feedback='';render();}};
  document.getElementById('next').onclick=()=>{if(done(state.stage)&&state.stage<STAGES.length-1){state.stage++;save();lastResult=null;lastError='';feedback='';render();}};
  document.getElementById('reset').onclick=()=>{if(confirm('לאפס את כל ההתקדמות והכתיבה?')){localStorage.removeItem(STORAGE_KEY);state=defaults();lastResult=null;lastError='';feedback='';render();}};
 }
