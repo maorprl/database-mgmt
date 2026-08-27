@@ -206,13 +206,67 @@ const STAGE_DIAGNOSTIC_TIPS=[
  "payments נדרש למדד עצמו; paid ו-open הם תנאי קיום/היעדר. הפרידו בין relations שמייצרים את המדד לבין relations שמשמשים כתנאי.",
  "קבצו ברמת invoice, השתמשו ב-LEFT JOIN ל-payments עם COALESCE(SUM(p.amount),0), הוציאו void ב-WHERE, וסננו את הפער ב-HAVING."
 ];
-function friendlySqlError(msg){
+function queryRelations(sql){
+ const found=[];
+ const re=/\b(?:FROM|JOIN)\s+([a-z_][\w]*)/ig;
+ let m;
+ while((m=re.exec(String(sql||''))))if(!found.includes(m[1]))found.push(m[1]);
+ return found;
+}
+function columnTables(column){
+ const col=String(column||'').split('.').pop();
+ return Object.keys(DOMAINS).filter(t=>Object.prototype.hasOwnProperty.call(DOMAINS[t],col));
+}
+function stageErrorHint(stage){
+ const s=STAGES[stage];
+ if(!s||!s.hints||!s.hints.length)return "";
+ return s.hints[0];
+}
+function friendlySqlError(msg,sql,stage){
  const m=String(msg||'');
- if(/near ";": syntax error/i.test(m))return "יש שגיאת תחביר ממש לפני ;. בדקו אם נשאר פסיק, WHERE/ON/GROUP BY לא גמור, או ביטוי שחסר לפני סוף השאילתה.";
- if(/no such column:/i.test(m))return "SQLite לא מוצא אחת העמודות. בדקו את שם ה-attribute ב-Schema ואת ה-alias של הטבלה. ("+m+")";
- if(/ambiguous column name:/i.test(m))return "שם עמודה אינו חד-משמעי כי הוא קיים ביותר מטבלה אחת. הוסיפו alias, למשל a.account_id. ("+m+")";
- if(/no such table:/i.test(m))return "SQLite לא מוצא את ה-relation הזה. בדקו את שם הטבלה ב-Schema. ("+m+")";
- if(/syntax error/i.test(m))return "יש שגיאת תחביר ב-SQL. SQLite אומר: "+m;
+ const relations=queryRelations(sql);
+ const relText=relations.length?relations.join(", "):"לא זוהה relation אחרי FROM/JOIN";
+ const noCol=m.match(/no such column:\s*([^\s]+)/i);
+ if(noCol){
+   const raw=noCol[1].replace(/[;,)]*$/,'');
+   const col=raw.split('.').pop();
+   const homes=columnTables(col);
+   let out="מה הטעות: SQLite לא מוצא את "+raw+" בתוך ה-relations שהשאילתה משתמשת בהם.";
+   if(homes.length)out+="\nאיפה הוא כן נמצא: "+homes.map(t=>t+"."+col).join(", ")+".";
+   out+="\nבשאילתה שלך כרגע מופיעים: "+relText+".";
+   if(stage===1&&col==="invoice_id"){
+     out+="\nמה זה אומר כאן: המשימה מבקשת גם מספר accounts וגם מספר invoices וסכום amount_due, אבל FROM accounts לבדו לא יכול לספק invoice_id.";
+     out+="\nרמז: כל מדד יכול להגיע מה-relation המתאים שלו. נסו לחשוב איך להחזיר את שלושת המדדים בשורה אחת בלי JOIN.";
+   }else{
+     const h=stageErrorHint(stage);
+     if(h)out+="\nרמז לשלב: "+h;
+   }
+   return out;
+ }
+ if(/near ";": syntax error/i.test(m)){
+   let out="מה הטעות: השאילתה נגמרת לפני שביטוי מסוים הושלם. SQLite נעצר ליד ;.";
+   out+="\nבדקו אם נשאר פסיק, WHERE/ON/GROUP BY לא גמור, או expression שחסר לפני סוף השאילתה.";
+   const h=stageErrorHint(stage); if(h)out+="\nרמז לשלב: "+h;
+   return out;
+ }
+ if(/ambiguous column name:/i.test(m)){
+   const col=(m.match(/ambiguous column name:\s*([^\s]+)/i)||[])[1]||"העמודה";
+   let out="מה הטעות: "+col+" קיים ביותר מ-relation אחד ולכן SQLite לא יודע לאיזה מהם התכוונתם.";
+   out+="\nרמז: הוסיפו alias לפני שם ה-attribute, למשל a.account_id או i.account_id.";
+   return out;
+ }
+ if(/no such table:/i.test(m)){
+   const tbl=(m.match(/no such table:\s*([^\s]+)/i)||[])[1]||"הטבלה";
+   let out="מה הטעות: SQLite לא מכיר relation בשם "+tbl+".";
+   out+="\nבדקו את השם המדויק ב-Schema.";
+   const h=stageErrorHint(stage); if(h)out+="\nרמז לשלב: "+h;
+   return out;
+ }
+ if(/syntax error/i.test(m)){
+   let out="יש שגיאת תחביר ב-SQL. SQLite אומר: "+m;
+   const h=stageErrorHint(stage); if(h)out+="\nרמז לשלב: "+h;
+   return out;
+ }
  return m;
 }
 function diagnoseResult(user,exp,stage){
@@ -358,7 +412,7 @@ function bind(){
  if(note) note.oninput=()=>{state.notes[state.stage]=note.value;save();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
- document.getElementById('run').onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';queryFeedback='';}catch(e){lastResult=null;lastError=friendlySqlError(e.message);queryFeedback='';}render();};
+ document.getElementById('run').onclick=()=>{if(!ed.value.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}try{lastResult=exec(ed.value);lastError='';queryFeedback='';}catch(e){lastResult=null;lastError=friendlySqlError(e.message,ed.value,state.stage);queryFeedback='';}render();};
  document.getElementById('hint').onclick=()=>{const i=state.hint[state.stage];state.hint[state.stage]=i===undefined?0:Math.min(i+1,curr().hints.length-1);save();render();};
  document.getElementById('solution').onclick=()=>{if(!state.solution[state.stage]&&state.hint[state.stage]===undefined&&!confirm('להציג את הפתרון המלא? כדאי קודם לנסות רמז ולהריץ ניסיון משלכם.'))return;state.solution[state.stage]=!state.solution[state.stage];save();render();};
  const checkQueryNow=()=>{
@@ -379,7 +433,7 @@ function bind(){
          queryFeedback=diagnoseResult(user,exp,state.stage);
        }
      }
-   }catch(e){queryFeedback='לא ניתן להריץ את השאילתה: '+friendlySqlError(e.message);}
+   }catch(e){queryFeedback='לא ניתן להריץ את השאילתה: '+friendlySqlError(e.message,ed.value,state.stage);}
    save();render();
  };
  const checkQuery=document.getElementById('checkQuery');
