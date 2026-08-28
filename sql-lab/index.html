@@ -43,7 +43,7 @@
 .topbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ghostbtn{border:1px solid var(--line);background:white;border-radius:9px;padding:9px 11px;font-weight:800;cursor:pointer;color:var(--ink)}
 .clearbtn{border:1px dashed var(--line);background:#f8faf8;color:#6c756f;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer}
-.schema-relations{display:flex;flex-wrap:wrap;gap:4px}.relation-chip{display:inline-flex;align-items:center;background:#eef3ef;border-radius:8px;overflow:hidden;margin:2px}.schema .relation-chip button{margin:0;border-radius:0}.schema .relation-chip .insert-mini{padding:7px 6px;border-right:1px solid #d8e1da;background:#f7faf8;color:#47705e;font-weight:900}.schema .relation-chip .insert-mini:hover,.insert-attr:hover,.preview-value:hover{background:#e5f1e9;color:#173d30}.attr-cell{display:flex;align-items:center;justify-content:space-between;gap:7px}.insert-attr{border:0!important;background:transparent!important;margin:0!important;padding:2px 5px!important;color:#47705e;font-weight:900;cursor:pointer}.preview-value{border:0;background:transparent;padding:2px 4px;border-radius:5px;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}.preview-value.null{font-style:italic;color:#8c9891}.insert-help{margin-top:9px;font-size:10px;line-height:1.5;color:var(--muted)}.relation-toggle{width:100%;margin-top:10px;border:1px solid var(--line);background:#f8faf8;color:#42564c;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer}.relation-lock{margin-top:10px}.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
+.schema-relations{display:flex;flex-wrap:wrap;gap:4px}.relation-chip{display:inline-flex;align-items:center;background:#eef3ef;border-radius:8px;overflow:hidden;margin:2px}.schema .relation-chip button{margin:0;border-radius:0}.schema .relation-chip .insert-mini{padding:7px 6px;border-right:1px solid #d8e1da;background:#f7faf8;color:#47705e;font-weight:900}.schema .relation-chip .insert-mini:hover,.insert-attr:hover,.preview-value:hover{background:#e5f1e9;color:#173d30}.attr-cell{display:flex;align-items:center;justify-content:space-between;gap:7px}.insert-attr{border:0!important;background:transparent!important;margin:0!important;padding:2px 5px!important;color:#47705e;font-weight:900;cursor:pointer}.preview-value{border:0;background:transparent;padding:2px 4px;border-radius:5px;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}.preview-value.null{font-style:italic;color:#8c9891}.insert-help{margin-top:9px;font-size:10px;line-height:1.5;color:var(--muted)}.attr-name-insert{border:0!important;background:transparent!important;margin:0!important;padding:2px 0!important;color:#31483d!important;font:inherit!important;font-weight:800!important;cursor:pointer;text-align:left}.attr-name-insert:hover{text-decoration:underline}.insert-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);opacity:0;pointer-events:none;z-index:100;background:#173d30;color:#fff;border-radius:999px;padding:9px 14px;font-size:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.18);transition:.16s}.insert-toast.show{opacity:1;transform:translate(-50%,0)}.relation-toggle{width:100%;margin-top:10px;border:1px solid var(--line);background:#f8faf8;color:#42564c;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer}.relation-lock{margin-top:10px}.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
 #cmwrap .CodeMirror{height:260px;font:13px/1.7 Consolas,monospace;direction:ltr;text-align:left;background:#10241c;color:#e8f0eb}
 #cmwrap .CodeMirror-gutters{background:#10241c;border-right:1px solid rgba(255,255,255,.1)}
 #cmwrap .CodeMirror-linenumber{color:#73877c}
@@ -59,7 +59,7 @@
 :root[data-theme="dark"] .top{background:rgba(15,26,21,.97)}
 :root[data-theme="dark"] .task,:root[data-theme="dark"] .subq,:root[data-theme="dark"] .joinchain,:root[data-theme="dark"] .schema-note,:root[data-theme="dark"] .data-preview .tablewrap{background:#18241d;border-color:var(--line)}
 :root[data-theme="dark"] .ghostbtn,:root[data-theme="dark"] .reset,:root[data-theme="dark"] .nav button,:root[data-theme="dark"] .hintbtn,:root[data-theme="dark"] .solutionbtn,:root[data-theme="dark"] .clearbtn,:root[data-theme="dark"] .relation-toggle{background:#18241d;color:var(--ink);border-color:var(--line)}
-:root[data-theme="dark"] .relation-chip{background:#1c2a22}:root[data-theme="dark"] .schema .relation-chip .insert-mini{background:#18241d;color:#9fd1b9;border-color:#33483d}:root[data-theme="dark"] .insert-attr,:root[data-theme="dark"] .preview-value{color:#cfe0d7}:root[data-theme="dark"] .schema .relation-chip .insert-mini:hover,:root[data-theme="dark"] .insert-attr:hover,:root[data-theme="dark"] .preview-value:hover{background:#24372d!important;color:#fff}:root[data-theme="dark"] .CodeMirror-hints{background:#17251f;border-color:#33483d;color:#e6efe9}:root[data-theme="dark"] .CodeMirror-hint-active{background:#2b7a5b;color:#fff}
+:root[data-theme="dark"] .relation-chip{background:#1c2a22}:root[data-theme="dark"] .schema .relation-chip .insert-mini{background:#18241d;color:#9fd1b9;border-color:#33483d}:root[data-theme="dark"] .insert-attr,:root[data-theme="dark"] .preview-value,:root[data-theme="dark"] .attr-name-insert{color:#cfe0d7!important}:root[data-theme="dark"] .schema .relation-chip .insert-mini:hover,:root[data-theme="dark"] .insert-attr:hover,:root[data-theme="dark"] .preview-value:hover{background:#24372d!important;color:#fff}:root[data-theme="dark"] .CodeMirror-hints{background:#17251f;border-color:#33483d;color:#e6efe9}:root[data-theme="dark"] .CodeMirror-hint-active{background:#2b7a5b;color:#fff}
 :root[data-theme="dark"] th{background:#1c2a22;color:#cfe0d7}
 :root[data-theme="dark"] td{border-color:#243229}
 :root[data-theme="dark"] .schema button{background:#1c2a22;color:#cfe0d7}
@@ -569,11 +569,48 @@ let lastResult=null,lastError='',feedback='',queryFeedback='';
 let cm=null;
 function editorValue(){return cm?cm.getValue():(document.getElementById('sql')||{value:''}).value;}
 
+let lastEditorCursor=null;
+function rememberEditorCursor(){
+ if(cm)lastEditorCursor=cm.getDoc().getCursor();
+}
 function insertIntoEditor(text){
- if(!cm)return;
- const doc=cm.getDoc(),cur=doc.getCursor();
- doc.replaceRange(String(text),cur);
- cm.focus();
+ const token=String(text);
+ if(cm){
+   const doc=cm.getDoc();
+   const cur=lastEditorCursor||doc.getCursor();
+   doc.setCursor(cur);
+   doc.replaceSelection(token,"end","+insert");
+   lastEditorCursor=doc.getCursor();
+   state.sql[state.stage]=cm.getValue();
+   save();
+   cm.focus();
+   showInsertToast(token);
+   return;
+ }
+ const ta=document.getElementById('sql');
+ if(ta){
+   const start=Number.isInteger(ta.selectionStart)?ta.selectionStart:ta.value.length;
+   const end=Number.isInteger(ta.selectionEnd)?ta.selectionEnd:start;
+   ta.value=ta.value.slice(0,start)+token+ta.value.slice(end);
+   ta.selectionStart=ta.selectionEnd=start+token.length;
+   state.sql[state.stage]=ta.value;
+   save();
+   ta.focus();
+   showInsertToast(token);
+ }
+}
+function showInsertToast(token){
+ let el=document.getElementById('insertToast');
+ if(!el){
+   el=document.createElement('div');
+   el.id='insertToast';
+   el.className='insert-toast';
+   document.body.appendChild(el);
+ }
+ el.textContent='נוסף לעורך: '+token;
+ el.classList.add('show');
+ clearTimeout(showInsertToast.timer);
+ showInsertToast.timer=setTimeout(()=>el.classList.remove('show'),1200);
 }
 
 const SQL_HINT_KEYWORDS=[
@@ -784,7 +821,7 @@ function render(){
  '</section>'+
  '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="skip" id="skip" '+(state.stage===STAGES.length-1?'disabled':'')+'>דלג לשלב הבא ↷</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
  '</section>'+
- '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell"><span>'+esc(a)+'</span>'+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview,canInsert)+'</div></section>'+
+ '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell">'+(canInsert?'<button class="attr-name-insert" data-insert-token="'+esc(a)+'" title="לחץ להוספה לעורך">'+esc(a)+'</button>':'<span>'+esc(a)+'</span>')+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview,canInsert)+'</div></section>'+
  glossaryHtml()+
  '<section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+(STAGES.filter((x,i)=>done(i)).length?STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join(''):'<li style="color:#9aa79f">עוד לא הושלמו שלבים.</li>')+'</ul></section></aside>'+
  '</main>';
@@ -804,6 +841,9 @@ function mountEditor(){
    }});
    cm.setSize('100%',260);
    cm.on('change',()=>{state.sql[state.stage]=cm.getValue();save();invalidateResult();});
+   cm.on('cursorActivity',()=>{rememberEditorCursor();});
+   cm.on('focus',()=>{rememberEditorCursor();});
+   lastEditorCursor=cm.getDoc().getCursor();
    cm.on('inputRead',(editor,change)=>{
      if(change&&change.origin==="complete")return;
      const typed=((change&&change.text)||[]).join("");
@@ -829,7 +869,7 @@ function clearTransient(){lastResult=null;lastError='';feedback='';queryFeedback
 function bind(){
  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();clearTransient();render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
- document.querySelectorAll('[data-insert-token]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();insertIntoEditor(b.dataset.insertToken);});
+ document.querySelectorAll('[data-insert-token]').forEach(b=>b.onmousedown=e=>{e.preventDefault();e.stopPropagation();insertIntoEditor(b.dataset.insertToken);});
  const note=document.getElementById('note');
  if(note)note.oninput=()=>{state.notes[state.stage]=note.value;save();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
