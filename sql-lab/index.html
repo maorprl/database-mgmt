@@ -337,7 +337,7 @@ function done(i){return state.completed.includes(i);}
 function skipped(i){return (state.skipped||[]).includes(i);}
 function passed(i){return done(i)||skipped(i);}
 function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!passed(i))return i;return STAGES.length-1;}
-function allowed(i){return i<=firstIncomplete();}
+function allowed(i){return true;}
 function relationGraphUnlocked(){return done(state.stage)||state.attempted.includes(state.stage)||state.hint[state.stage]!==undefined;}
 function relationGraphOpen(){return !!state.graphOpen[state.stage];}
 function norm(r){if(!r)return'';return JSON.stringify([r.columns,r.values.map(x=>x.map(v=>v===null?null:v)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))]);}
@@ -805,7 +805,7 @@ function render(){
  '<div class="progress"><div class="progline"><span>'+state.completed.length+' מתוך '+STAGES.length+' הושלמו</span><span>'+pct+'%</span></div><div class="track"><span style="width:'+pct+'%"></span></div></div>'+
  '<div class="topbtns"><button class="ghostbtn" id="theme" title="מצב תצוגה">'+(state.theme==='dark'?'☀️':'🌙')+'</button><button class="ghostbtn" id="export" title="ייצוא התקדמות">⬇︎ ייצוא</button><button class="ghostbtn" id="importBtn" title="ייבוא התקדמות">⬆︎ ייבוא</button><input type="file" id="importFile" accept="application/json" hidden><button class="reset" id="reset">איפוס</button></div></header>'+
  '<main class="layout">'+
- '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+(!allowed(i)?'locked':'')+'" data-step="'+i+'" '+(!allowed(i)?'disabled':'')+'><span class="n">'+(done(i)?'✓':skipped(i)?'↷':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+(skipped(i)?' · דולג':'')+'</small></span></button>').join('')+'</nav></aside>'+
+ '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+'" data-step="'+i+'"><span class="n">'+(done(i)?'✓':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+contextText+'</div><div class="task"><b>המשימה</b><br>'+taskText+'</div>'+(s.pred?'<div class="prediction"><b>לפני ההרצה:</b> '+predText+'</div>':'')+'</article>'+ (s.joinViz?joinVizHtml(s.joinViz):'')+
  ((s.summary||s.intro)?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · נשמר אוטומטית · Ctrl/Cmd+Enter להרצה':'נשמר אוטומטית · Ctrl/Cmd+Enter להרצה')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+'>▶ Run Query</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button></div></div></section>')+
@@ -819,7 +819,7 @@ function render(){
  (feedback?'<div class="feedback '+(feedback.startsWith('נכון')||feedback.startsWith('מצוין')||feedback.startsWith('מעולה')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+
  (state.solution[state.stage]&&!s.intro?'<div class="solutionbox"><b>פתרון מוצע</b>'+(s.summary?'<p>'+esc(s.solution)+'</p>':s.mapping?'<p>'+esc(s.solution)+'</p>':'<pre>'+esc(s.solution)+'</pre>')+(s.gotcha?'<p><b>מלכודת:</b> '+esc(s.gotcha)+'</p>':'')+'<p><b>עיקרון:</b> '+principleText+'</p></div>':'')+
  '</section>'+
- '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="skip" id="skip" '+(state.stage===STAGES.length-1?'disabled':'')+'>דלג לשלב הבא ↷</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
+ '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
  '</section>'+
  '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell">'+(canInsert?'<button class="attr-name-insert" data-insert-token="'+esc(a)+'" title="לחץ להוספה לעורך">'+esc(a)+'</button>':'<span>'+esc(a)+'</span>')+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview,canInsert)+'</div></section>'+
  glossaryHtml()+
@@ -928,7 +928,6 @@ function bind(){
  if(checkDec)checkDec.onclick=()=>{const r=checkDecision();feedback=r.msg;if(r.ok){if(!done(state.stage))state.completed.push(state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);}save();render();};
 
  document.getElementById('prev').onclick=()=>{if(state.stage>0){state.stage--;save();clearTransient();render();}};
- document.getElementById('skip').onclick=()=>{if(state.stage<STAGES.length-1){if(!done(state.stage)&&!skipped(state.stage)){state.skipped=state.skipped||[];state.skipped.push(state.stage);}state.stage++;save();clearTransient();render();}};
  document.getElementById('next').onclick=()=>{if(done(state.stage)&&state.stage<STAGES.length-1){state.stage++;save();clearTransient();render();}};
  document.getElementById('reset').onclick=()=>{if(confirm('לאפס את כל ההתקדמות והכתיבה?')){localStorage.removeItem(STORAGE_KEY);state=defaults();clearTransient();render();}};
 
