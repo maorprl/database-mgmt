@@ -34,14 +34,16 @@
 .decgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:6px}.decgrid>div{background:#fff;padding:9px 11px;font-size:12px;line-height:1.5}.decgrid .dh{background:#f0f4f1;font-weight:900;color:#31483d}.decgrid .dt{font-weight:800;color:#285e43;direction:ltr;text-align:left}.decquiz select{width:100%;border:1px solid #d8dfda;border-radius:10px;padding:10px;background:#fff;outline:0;margin-top:4px}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
 <style>
 .topbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ghostbtn{border:1px solid var(--line);background:white;border-radius:9px;padding:9px 11px;font-weight:800;cursor:pointer;color:var(--ink)}
 .clearbtn{border:1px dashed var(--line);background:#f8faf8;color:#6c756f;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer}
-.relation-toggle{width:100%;margin-top:10px;border:1px solid var(--line);background:#f8faf8;color:#42564c;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer}.relation-lock{margin-top:10px}.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
+.schema-relations{display:flex;flex-wrap:wrap;gap:4px}.relation-chip{display:inline-flex;align-items:center;background:#eef3ef;border-radius:8px;overflow:hidden;margin:2px}.schema .relation-chip button{margin:0;border-radius:0}.schema .relation-chip .insert-mini{padding:7px 6px;border-right:1px solid #d8e1da;background:#f7faf8;color:#47705e;font-weight:900}.schema .relation-chip .insert-mini:hover,.insert-attr:hover,.preview-value:hover{background:#e5f1e9;color:#173d30}.attr-cell{display:flex;align-items:center;justify-content:space-between;gap:7px}.insert-attr{border:0!important;background:transparent!important;margin:0!important;padding:2px 5px!important;color:#47705e;font-weight:900;cursor:pointer}.preview-value{border:0;background:transparent;padding:2px 4px;border-radius:5px;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}.preview-value.null{font-style:italic;color:#8c9891}.insert-help{margin-top:9px;font-size:10px;line-height:1.5;color:var(--muted)}.relation-toggle{width:100%;margin-top:10px;border:1px solid var(--line);background:#f8faf8;color:#42564c;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer}.relation-lock{margin-top:10px}.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
 #cmwrap .CodeMirror{height:260px;font:13px/1.7 Consolas,monospace;direction:ltr;text-align:left;background:#10241c;color:#e8f0eb}
 #cmwrap .CodeMirror-gutters{background:#10241c;border-right:1px solid rgba(255,255,255,.1)}
 #cmwrap .CodeMirror-linenumber{color:#73877c}
@@ -50,12 +52,14 @@
 #cmwrap .cm-s-default .cm-number{color:#f3a17e}
 #cmwrap .cm-s-default .cm-string{color:#d6b8ff}
 #cmwrap .CodeMirror-cursor{border-left-color:#e8f0eb}
+.CodeMirror-hints{z-index:40;font:12px/1.5 Consolas,monospace;border:1px solid #cad7cf;border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:4px;min-width:210px}.CodeMirror-hint{padding:5px 8px;border-radius:6px}.CodeMirror-hint-active{background:#267154;color:#fff}
 :root[data-theme="dark"]{--bg:#0f1a15;--ink:#e6efe9;--muted:#9fb0a6;--line:#28362f;--green:#2b7a5b;--green2:#4fbc8f;--white:#152019;--shadow:0 8px 24px rgba(0,0,0,.35)}
 :root[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
 :root[data-theme="dark"] .card{background:#152019;border-color:var(--line)}
 :root[data-theme="dark"] .top{background:rgba(15,26,21,.97)}
 :root[data-theme="dark"] .task,:root[data-theme="dark"] .subq,:root[data-theme="dark"] .joinchain,:root[data-theme="dark"] .schema-note,:root[data-theme="dark"] .data-preview .tablewrap{background:#18241d;border-color:var(--line)}
 :root[data-theme="dark"] .ghostbtn,:root[data-theme="dark"] .reset,:root[data-theme="dark"] .nav button,:root[data-theme="dark"] .hintbtn,:root[data-theme="dark"] .solutionbtn,:root[data-theme="dark"] .clearbtn,:root[data-theme="dark"] .relation-toggle{background:#18241d;color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .relation-chip{background:#1c2a22}:root[data-theme="dark"] .schema .relation-chip .insert-mini{background:#18241d;color:#9fd1b9;border-color:#33483d}:root[data-theme="dark"] .insert-attr,:root[data-theme="dark"] .preview-value{color:#cfe0d7}:root[data-theme="dark"] .schema .relation-chip .insert-mini:hover,:root[data-theme="dark"] .insert-attr:hover,:root[data-theme="dark"] .preview-value:hover{background:#24372d!important;color:#fff}:root[data-theme="dark"] .CodeMirror-hints{background:#17251f;border-color:#33483d;color:#e6efe9}:root[data-theme="dark"] .CodeMirror-hint-active{background:#2b7a5b;color:#fff}
 :root[data-theme="dark"] th{background:#1c2a22;color:#cfe0d7}
 :root[data-theme="dark"] td{border-color:#243229}
 :root[data-theme="dark"] .schema button{background:#1c2a22;color:#cfe0d7}
@@ -543,12 +547,20 @@ function schemaGraphHtml(){
  });
  return '<div class="schema-graph"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Schema relationship graph">'+edges+boxes+'</svg><div class="schema-note">קווים כתומים = קשרי FK שנוגעים ב-relation שנבחר.</div></div>';
 }
-function previewDataHtml(table){
+function sqlLiteral(v){
+ if(v===null)return "NULL";
+ if(typeof v==="number")return String(v);
+ return "'"+String(v).replace(/'/g,"''")+"'";
+}
+function previewDataHtml(table,canInsert){
  if(!db)return '<div class="schema-note">הנתונים יופיעו כשהמסד יסיים להיטען.</div>';
  try{
    const rs=db.exec('SELECT * FROM '+table+' LIMIT 5');
    if(!rs.length)return '<div class="schema-note">אין רשומות.</div>';
-   return resultHtml(rs[0]);
+   const r=rs[0];
+   return '<div class="tablewrap"><table><thead><tr>'+r.columns.map(col=>'<th>'+esc(col)+'</th>').join('')+'</tr></thead><tbody>'+
+    r.values.map(row=>'<tr>'+row.map(v=>'<td>'+(canInsert?'<button class="preview-value '+(v===null?'null':'')+'" data-insert-token="'+esc(sqlLiteral(v))+'" title="הוסף value לעורך">'+(v===null?'NULL':esc(v))+'</button>':(v===null?'<em>NULL</em>':esc(v)))+'</td>').join('')+'</tr>').join('')+
+    '</tbody></table></div>';
  }catch(e){
    return '<div class="schema-note">לא ניתן לטעון preview.</div>';
  }
@@ -556,6 +568,82 @@ function previewDataHtml(table){
 let lastResult=null,lastError='',feedback='',queryFeedback='';
 let cm=null;
 function editorValue(){return cm?cm.getValue():(document.getElementById('sql')||{value:''}).value;}
+
+function insertIntoEditor(text){
+ if(!cm)return;
+ const doc=cm.getDoc(),cur=doc.getCursor();
+ doc.replaceRange(String(text),cur);
+ cm.focus();
+}
+
+const SQL_HINT_KEYWORDS=[
+ "SELECT","FROM","WHERE","INNER JOIN","LEFT OUTER JOIN","ON","AS","AND","OR","NOT",
+ "EXISTS","NOT EXISTS","GROUP BY","HAVING","ORDER BY","ASC","DESC","DISTINCT",
+ "COUNT","SUM","AVG","MIN","MAX","COALESCE","CASE","WHEN","THEN","ELSE","END","WITH","NULL","IS NULL","IS NOT NULL"
+];
+const SQL_RESERVED_ALIAS=new Set(["WHERE","INNER","LEFT","RIGHT","FULL","JOIN","ON","GROUP","ORDER","HAVING","LIMIT","UNION","AND","OR","AS"]);
+
+function aliasMapFromSql(sql){
+ const map={};
+ const re=/\b(?:FROM|JOIN)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:AS\s+)?([A-Za-z_][A-Za-z0-9_]*))?/gi;
+ let m;
+ while((m=re.exec(String(sql||"")))){
+   const table=m[1],alias=m[2];
+   if(!DOMAINS[table])continue;
+   map[table]=table;
+   if(alias&&!SQL_RESERVED_ALIAS.has(alias.toUpperCase()))map[alias]=table;
+ }
+ return map;
+}
+function completionItem(text,label,type){
+ return {text:text,displayText:text+(label?"  · "+label:""),className:type?"sql-hint-"+type:""};
+}
+function sqlCompletionHint(editor){
+ const cur=editor.getCursor();
+ const line=editor.getLine(cur.line);
+ const before=line.slice(0,cur.ch);
+ const aliases=aliasMapFromSql(editor.getValue());
+ let from=CodeMirror.Pos(cur.line,cur.ch),to=CodeMirror.Pos(cur.line,cur.ch),prefix="",items=[];
+
+ const dotted=before.match(/([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$/);
+ if(dotted){
+   const qualifier=dotted[1],table=aliases[qualifier]||(DOMAINS[qualifier]?qualifier:null);
+   prefix=dotted[2]||"";
+   from=CodeMirror.Pos(cur.line,cur.ch-prefix.length);
+   if(table)items=Object.keys(DOMAINS[table]).map(col=>completionItem(col,table,"column"));
+ }else{
+   const word=before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+   prefix=word?word[0]:"";
+   from=CodeMirror.Pos(cur.line,cur.ch-prefix.length);
+   const context=before.slice(0,cur.ch-prefix.length);
+   const wantsTable=/\b(?:FROM|JOIN)\s*$/i.test(context);
+   if(wantsTable){
+     items=Object.keys(DOMAINS).map(t=>completionItem(t,"relation","table"));
+   }else{
+     const tables=Object.keys(DOMAINS).map(t=>completionItem(t,"relation","table"));
+     const columns=[];
+     Object.keys(DOMAINS).forEach(t=>Object.keys(DOMAINS[t]).forEach(col=>columns.push(completionItem(col,t,"column"))));
+     const keywords=SQL_HINT_KEYWORDS.map(k=>completionItem(k,"SQL","keyword"));
+     items=[...tables,...columns,...keywords];
+   }
+ }
+
+ const p=prefix.toLowerCase();
+ items=items.filter(x=>!p||x.text.toLowerCase().startsWith(p));
+ const seen=new Set();
+ items=items.filter(x=>{const k=x.text+"|"+x.displayText;if(seen.has(k))return false;seen.add(k);return true;});
+ return {list:items,from:from,to:to};
+}
+function showSqlHints(editor,force){
+ if(!window.CodeMirror||!CodeMirror.showHint)return;
+ if(!force){
+   const cur=editor.getCursor(),line=editor.getLine(cur.line).slice(0,cur.ch);
+   const dotted=/[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z0-9_]*$/.test(line);
+   const word=(line.match(/[A-Za-z_][A-Za-z0-9_]*$/)||[""])[0];
+   if(!dotted&&word.length<2)return;
+ }
+ CodeMirror.showHint(editor,sqlCompletionHint,{completeSingle:false,alignWithWord:true});
+}
 
 const GRAIN_OPTIONS=[
   ["","בחרו..."],["account","חשבון אחד"],["subscription","מינוי אחד"],["user","משתמש אחד"],["invoice","חשבונית אחת"],["payment","תשלום אחד"]
@@ -666,6 +754,7 @@ function render(){
  const noteVal=state.notes[state.stage]||'';
  const needNote=!!s.requireNote;
  const dbStatus=db?'מסד הנתונים מוכן':esc(dbError||'טוען SQLite…');
+ const canInsert=!s.intro&&!s.summary;
  const seenTerms=new Set();
  const contextText=formatStageTerms(s.context,seenTerms);
  const taskText=formatStageTerms(s.task,seenTerms);
@@ -695,7 +784,7 @@ function render(){
  '</section>'+
  '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="skip" id="skip" '+(state.stage===STAGES.length-1?'disabled':'')+'>דלג לשלב הבא ↷</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא →')+'</button></div>'+
  '</section>'+
- '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div>'+Object.keys(TABLES).map(t=>'<button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>').join('')+'</div>'+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr">'+esc(a)+'</td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview)+'</div></section>'+
+ '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell"><span>'+esc(a)+'</span>'+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview,canInsert)+'</div></section>'+
  glossaryHtml()+
  '<section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+(STAGES.filter((x,i)=>done(i)).length?STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join(''):'<li style="color:#9aa79f">עוד לא הושלמו שלבים.</li>')+'</ul></section></aside>'+
  '</main>';
@@ -709,9 +798,17 @@ function mountEditor(){
  const ta=document.getElementById('sql');
  if(!ta)return;
  if(window.CodeMirror){
-   cm=CodeMirror.fromTextArea(ta,{mode:'text/x-sql',lineNumbers:true,matchBrackets:true,direction:'ltr',lineWrapping:true,extraKeys:{'Ctrl-Enter':runCurrent,'Cmd-Enter':runCurrent}});
+   cm=CodeMirror.fromTextArea(ta,{mode:'text/x-sql',lineNumbers:true,matchBrackets:true,direction:'ltr',lineWrapping:true,extraKeys:{
+     'Ctrl-Enter':runCurrent,'Cmd-Enter':runCurrent,
+     'Ctrl-Space':editor=>showSqlHints(editor,true)
+   }});
    cm.setSize('100%',260);
    cm.on('change',()=>{state.sql[state.stage]=cm.getValue();save();invalidateResult();});
+   cm.on('inputRead',(editor,change)=>{
+     if(change&&change.origin==="complete")return;
+     const typed=((change&&change.text)||[]).join("");
+     if(/[A-Za-z0-9_.]/.test(typed))setTimeout(()=>{if(cm===editor)showSqlHints(editor,false);},0);
+   });
  }
 }
 function invalidateResult(){
@@ -732,6 +829,7 @@ function clearTransient(){lastResult=null;lastError='';feedback='';queryFeedback
 function bind(){
  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();clearTransient();render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
+ document.querySelectorAll('[data-insert-token]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();insertIntoEditor(b.dataset.insertToken);});
  const note=document.getElementById('note');
  if(note)note.oninput=()=>{state.notes[state.stage]=note.value;save();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
