@@ -161,6 +161,7 @@ const STAGES=[
 {title:"קובעים Baseline לפני JOIN",short:"Baseline",baseline:true,eye:"בקרה · לפני ה-JOIN הראשון",context:"כדי לזהות ניפוח בהמשך, צריך מספרי בקרה שלא תלויים ב-JOIN.",task:"החזירו בשורה אחת: מספר accounts, מספר invoices וסכום amount_due של כל החשבוניות.",starter:"",expected:"SELECT (SELECT COUNT(*) FROM accounts) account_count,(SELECT COUNT(*) FROM invoices) invoice_count,(SELECT SUM(amount_due) FROM invoices) issued_total;",note:"מה בדיוק סופר או מסכם כל מספר?",hints:["כל מספר מגיע מ-relation אחר.","צריך COUNT(*) על invoices ו-SUM(amount_due).","השתמשו ב-scalar subqueries."],solution:"SELECT (SELECT COUNT(*) FROM accounts) AS account_count, (SELECT COUNT(*) FROM invoices) AS invoice_count, (SELECT SUM(amount_due) FROM invoices) AS issued_total;",principle:"Baseline = נקודת בקרה לפני שינוי Grain."},
 {title:"INNER JOIN: מי חויב, מתי ובכמה?",short:"INNER JOIN",eye:"JOIN ראשון · חזרות תקינות",joinViz:"inner",context:"מנהלת הכספים רוצה שם account ליד כל invoice.",task:"הציגו account_name, invoice_id, issued_at ו-amount_due לכל invoice, לפי invoice_id.",pred:"מה יהיה ה-output Grain? האם account_name יכול לחזור בלי שזו כפילות?",starter:"",expected:"SELECT a.account_name,i.invoice_id,i.issued_at,i.amount_due FROM accounts a INNER JOIN invoices i ON i.account_id=a.account_id ORDER BY i.invoice_id;",note:"כתבו תחזית: כמה rows ומה מייצגת כל row?",hints:["איזו עמודה ב-invoices מצביעה על account?","השוו account_id משני הצדדים.","ON i.account_id = a.account_id"],solution:"SELECT a.account_name,i.invoice_id,i.issued_at,i.amount_due FROM accounts a INNER JOIN invoices i ON i.account_id=a.account_id ORDER BY i.invoice_id;",principle:"JOIN 1:M מייצר שורה לכל match; חזרת entity אינה duplicate tuple."},
 {title:"INNER JOIN: account וה-users שלו",short:"JOIN 1:M",eye:"תרגול JOIN · חזרת parent",joinViz:"inner",context:"עכשיו מחברים accounts ל-users. לכל user יש account_id, ולאותו account יכולים להיות כמה users.",task:"החזירו account_name, full_name ו-role לכל user. סדרו לפי user_id.",pred:"לפני הכתיבה: מה יהיה ה-Grain של התוצאה? האם account_name יכול להופיע כמה פעמים ועדיין להיות תקין?",starter:"",expected:"SELECT a.account_name,u.full_name,u.role FROM accounts a INNER JOIN users u ON u.account_id=a.account_id ORDER BY u.user_id;",note:"התוצאה צריכה להיות ב-Grain של user.",hints:["התחילו מה-relation שה-row שלו צריך להופיע בתוצאה.","users.account_id מצביע על accounts.account_id.","תנאי ה-ON מחבר את שני ה-account_id."],solution:"SELECT a.account_name,u.full_name,u.role FROM accounts a INNER JOIN users u ON u.account_id=a.account_id ORDER BY u.user_id;",principle:"ב-INNER JOIN של 1:M, ה-Grain בדרך כלל עובר לצד ה-M כאשר כל match מוחזר כ-row."},
+{title:"מי המשתמשים בחשבונות שחויבו?",short:"JOIN נוסף",eye:"תרגול JOIN · מחברים עוד מידע",trapId:"early-fanout",fanoutTrap:true,context:"מנהלת הכספים רוצה לראות את המשתמשים של כל account לצד החשבוניות של אותו account.",task:"החזירו account_name, full_name, invoice_id ו-amount_due לכל account שיש לו גם user וגם invoice. סדרו לפי account_id, אחר כך user_id ואז invoice_id.",pred:"לפני ההרצה: כמה rows אתם מצפים לקבל, ומה לדעתכם תייצג row אחת בתוצאה?",starter:"",expected:"SELECT a.account_name,u.full_name,i.invoice_id,i.amount_due FROM accounts a INNER JOIN users u ON u.account_id=a.account_id INNER JOIN invoices i ON i.account_id=a.account_id ORDER BY a.account_id,u.user_id,i.invoice_id;",note:"אחרי ההרצה: האם מספר ה-rows תאם למה שציפיתם? מה מייצגת row אחת?",hints:["גם users וגם invoices מכילים account_id. חברו כל אחד מהם ל-accounts דרך account_id.","אין ב-invoices user_id ואין ב-users invoice_id — אל תמציאו קשר ישיר שלא קיים.","אם ל-account אחד יש 3 users וגם 3 invoices, כל user יכול להתאים לכל invoice דרך אותו account."],solution:"SELECT a.account_name,u.full_name,i.invoice_id,i.amount_due FROM accounts a INNER JOIN users u ON u.account_id=a.account_id INNER JOIN invoices i ON i.account_id=a.account_id ORDER BY a.account_id,u.user_id,i.invoice_id;",principle:"כששני קשרי 1:M יוצאים מאותו parent ומחברים את שניהם יחד, כל match מענף אחד יכול להשתלב עם כל match מהענף השני. זה fan-out."},
 {title:"INNER JOIN: subscription וה-plan שלו",short:"JOIN לפי FK",eye:"תרגול JOIN · Foreign Key",joinViz:"inner",context:"ב-subscriptions שמור רק plan_id. השם והמחיר של החבילה נמצאים ב-plans.",task:"החזירו subscription_id, plan_name ו-monthly_price לכל subscription. סדרו לפי subscription_id.",pred:"איזה attribute מחבר בין subscriptions ל-plans?",starter:"",expected:"SELECT s.subscription_id,p.plan_name,p.monthly_price FROM subscriptions s INNER JOIN plans p ON p.plan_id=s.plan_id ORDER BY s.subscription_id;",note:"המטרה היא לזהות את ה-FK ולבנות תנאי ON מדויק.",hints:["חפשו ב-Schema איזה attribute ב-subscriptions מסומן FK→plans.","ההתאמה היא בין plan_id בשני relations.","כתבו INNER JOIN plans ... ON ..."],solution:"SELECT s.subscription_id,p.plan_name,p.monthly_price FROM subscriptions s INNER JOIN plans p ON p.plan_id=s.plan_id ORDER BY s.subscription_id;",principle:"תנאי JOIN מבטא את הקשר בין המפתחות; הוא לא נבחר לפי שמות דומים בלבד."},
 {title:"LEFT OUTER JOIN: שומרים גם accounts בלי invoice",short:"LEFT OUTER JOIN",eye:"תרגול JOIN · שמירת הצד השמאלי",joinViz:"left",context:"Harbor Legal קיים ב-accounts אבל אין לו אף invoice. הפעם אסור שהוא ייעלם.",task:"החזירו account_name, invoice_id ו-amount_due לכל account. גם account בלי invoice חייב להופיע. סדרו לפי account_id ואז invoice_id.",pred:"מה יופיע בעמודות של invoice עבור account שאין לו match?",starter:"",expected:"SELECT a.account_name,i.invoice_id,i.amount_due FROM accounts a LEFT OUTER JOIN invoices i ON i.account_id=a.account_id ORDER BY a.account_id,i.invoice_id;",note:"השוו בראש בין INNER JOIN לבין LEFT OUTER JOIN: מי נשמר כאשר אין match?",hints:["ה-relation שחייב להישמר כולו צריך להיות בצד שמאל.","LEFT OUTER JOIN שומר כל row מהצד השמאלי גם בלי match.","כשאין invoice, הערכים מ-invoices יהיו NULL."],solution:"SELECT a.account_name,i.invoice_id,i.amount_due FROM accounts a LEFT OUTER JOIN invoices i ON i.account_id=a.account_id ORDER BY a.account_id,i.invoice_id;",principle:"LEFT OUTER JOIN שומר את כל rows של הצד השמאלי; כשאין match, attributes מהצד הימני הם NULL."},
 {title:"JOIN של שלושה relations: account → subscription → plan",short:"3-way JOIN",eye:"תרגול JOIN · שרשרת קשרים",joinViz:"chain",context:"השם של ה-account נמצא ב-accounts, סטטוס המינוי ב-subscriptions, ושם החבילה והמחיר ב-plans.",task:"החזירו account_name, status, plan_name ו-monthly_price לכל account שיש לו subscription. סדרו לפי account_id.",pred:"אין קיצור דרך בין accounts ל-plans: דרך איזה relation עוברת השרשרת?",starter:"",expected:"SELECT a.account_name,s.status,p.plan_name,p.monthly_price FROM accounts a INNER JOIN subscriptions s ON s.account_id=a.account_id INNER JOIN plans p ON p.plan_id=s.plan_id ORDER BY a.account_id;",note:"חברו כל זוג relations לפי הקשר שלו, צעד אחד בכל פעם.",hints:["החיבור הראשון הוא accounts ↔ subscriptions.","החיבור השני הוא subscriptions ↔ plans.","אל תחברו accounts ישירות ל-plans רק מפני ששניהם קשורים עסקית."],solution:"SELECT a.account_name,s.status,p.plan_name,p.monthly_price FROM accounts a INNER JOIN subscriptions s ON s.account_id=a.account_id INNER JOIN plans p ON p.plan_id=s.plan_id ORDER BY a.account_id;",principle:"ב-JOIN של כמה relations בונים שרשרת של קשרים אמיתיים; כל ON מתאר קשר אחד."},
@@ -249,7 +250,7 @@ const FK_EDGES=[
 ];
 
 let db=null, dbError='', preview='accounts';
-const APP_STATE_VERSION=9;
+const APP_STATE_VERSION=10;
 const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{}});
 let state=load();
 function migrateState(x){
@@ -296,6 +297,23 @@ function migrateState(x){
    out.hint=shiftMap(out.hint);
    out.solution=shiftMap(out.solution);
    out.graphOpen=shiftMap(out.graphOpen);
+ }
+ // v10 inserts the early fan-out trap at index 5.
+ // Preserve all saved work, shift old stages 5+ by one, and bring learners
+ // who were already past this point back to the new required lesson.
+ if(v<10&&hasSavedState){
+   const oldStage=Number(out.stage||0);
+   const shiftIndex=i=>Number(i)>=5?Number(i)+1:Number(i);
+   const shiftMap=o=>Object.fromEntries(Object.entries(o||{}).map(([k,val])=>[String(shiftIndex(k)),val]));
+   out.completed=(out.completed||[]).map(shiftIndex);
+   out.skipped=(out.skipped||[]).map(shiftIndex);
+   out.attempted=(out.attempted||[]).map(shiftIndex);
+   out.sql=shiftMap(out.sql);
+   out.notes=shiftMap(out.notes);
+   out.hint=shiftMap(out.hint);
+   out.solution=shiftMap(out.solution);
+   out.graphOpen=shiftMap(out.graphOpen);
+   out.stage=oldStage>=5?5:oldStage;
  }
  out.version=APP_STATE_VERSION;
  return out;
@@ -407,6 +425,33 @@ function friendlySqlError(msg,sql,stage){
  }
  return m;
 }
+function fanoutAvoidanceKind(sql){
+ const q=String(sql||"");
+ if(/\bDISTINCT\b/i.test(q))return "distinct";
+ if(/\bEXISTS\s*\(/i.test(q))return "exists";
+ if(/\bGROUP\s+BY\b/i.test(q)||/\b(COUNT|SUM|AVG|MIN|MAX)\s*\(/i.test(q))return "aggregation";
+ if(/\bWITH\b/i.test(q))return "cte";
+ if(/\(\s*SELECT\b/i.test(q))return "subquery";
+ return "";
+}
+function fanoutTriggeredFeedback(sql){
+ const distinct=/\bDISTINCT\b/i.test(String(sql||""));
+ let msg="נכון — והמלכודת הופעלה. Bloom Retail הוא הדוגמה הכי ברורה: יש לו 3 users ו-3 invoices, ולכן החיבור יוצר 3×3 = 9 rows רק עבורו. אין קשר ישיר בין user ל-invoice; שניהם מתאימים דרך אותו account, ולכן כל user משתלב עם כל invoice של אותו account. זה fan-out.";
+ if(distinct)msg+=" הוספת DISTINCT, אבל כאן הוא לא מציל: השורות אינן duplicates זהות — בכל אחת יש שילוב אחר של user ו-invoice.";
+ msg+=" כרגע זה בדיוק מה שרצינו לראות; בהמשך נלמד מתי זה מנפח metrics ואיך מתקנים.";
+ return msg;
+}
+function fanoutAvoidedFeedback(sql,user,exp){
+ const kind=fanoutAvoidanceKind(sql);
+ if(!kind)return "";
+ if(kind==="distinct"){
+   return "זיהיתי שניסית DISTINCT כדי להתחמק מהתרבות השורות. זו מלכודת חשובה: fan-out אינו בהכרח יוצר duplicate rows זהות; כל שילוב user×invoice יכול להיות tuple שונה, ולכן DISTINCT לא בהכרח פותר אותו. בתרגיל הזה נסו קודם JOIN ישיר של accounts→users ושל accounts→invoices כדי לראות את התופעה עצמה.";
+ }
+ if(!user||!exp||user.values.length>=exp.values.length)return "";
+ const labels={exists:"EXISTS",aggregation:"aggregation",cte:"CTE",subquery:"subquery"};
+ return "התחמקת מהמלכודת — השתמשת ב-"+(labels[kind]||kind)+" באופן שמנע את כל שילובי user×invoice. זה יכול להיות פתרון נכון בשאלה עסקית אמיתית. אבל כאן מטרת התרגיל היא לראות את ה-fan-out עצמו: כשגם users וגם invoices הם 1:M מול account, JOIN ישיר של שני הענפים משלב כל user עם כל invoice באותו account. נסו פעם אחת את החיבור הישיר; Bloom Retail אמור להמחיש 3×3 = 9 rows.";
+}
+
 function diagnoseResult(user,exp,stage){
  const parts=[];
  if(user.columns.length!==exp.columns.length){
@@ -683,11 +728,12 @@ function bind(){
      }else{
        const user=exec(val),exp=exec(curr().expected);
        if(sameResultValues(user,exp)){
-         queryFeedback=user.columns.join('|')===exp.columns.join('|')?'נכון. השאילתה מחזירה את התוצאה הצפויה.':'נכון. הערכים נכונים. שמות העמודות שונים מהפתרון, וזה לא פוסל את השאילתה.';
+         queryFeedback=curr().fanoutTrap?fanoutTriggeredFeedback(val):(user.columns.join('|')===exp.columns.join('|')?'נכון. השאילתה מחזירה את התוצאה הצפויה.':'נכון. הערכים נכונים. שמות העמודות שונים מהפתרון, וזה לא פוסל את השאילתה.');
          if(!done(state.stage))state.completed.push(state.stage);
          state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);
        }else{
-         queryFeedback=diagnoseResult(user,exp,state.stage);
+         const avoided=curr().fanoutTrap?fanoutAvoidedFeedback(val,user,exp):"";
+         queryFeedback=avoided||diagnoseResult(user,exp,state.stage);
        }
      }
    }catch(e){queryFeedback='לא ניתן להריץ את השאילתה: '+friendlySqlError(e.message,val,state.stage);}
