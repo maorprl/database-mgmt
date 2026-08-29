@@ -280,7 +280,7 @@ const FK_EDGES=[
 ];
 
 let db=null, dbError='', preview='accounts';
-const APP_STATE_VERSION=12;
+const APP_STATE_VERSION=13;
 const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},scratch:{},predAnswers:{},predChecked:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{}});
 let state=load();
 function migrateState(x){
@@ -593,7 +593,7 @@ function previewDataHtml(table,canInsert){
    return '<div class="schema-note">לא ניתן לטעון preview.</div>';
  }
 }
-let lastResult=null,lastError='',feedback='',queryFeedback='',predictionFeedback='',predictionFeedbackOk=false;
+let lastResult=null,lastError='',feedback='',queryFeedback='';
 let cm=null;
 function editorValue(){return cm?cm.getValue():(document.getElementById('sql')||{value:''}).value;}
 function runnableSql(){
@@ -827,16 +827,20 @@ function checkDecision(){
  return {ok:true,msg:"מצוין. סיימתם את המסלול: עכשיו המטרה היא לזהות את התפקיד של כל relation ולבחור כלי בהתאם."};
 }
 
+function predQuestionChecked(stage,qi){
+ const v=(state.predChecked||{})[stage];
+ if(v===true)return true; // compatibility with v12, where the whole quiz was checked at once
+ return !!(v&&typeof v==='object'&&v[qi]);
+}
 function predictionQuizHtml(s){
  const byStage=(state.predAnswers||{})[state.stage]||{};
- const checked=!!((state.predChecked||{})[state.stage]);
  const qs=s.predQuiz.map((q,qi)=>{
    const cur=byStage[qi]||'';
+   const checked=predQuestionChecked(state.stage,qi);
    const exp=(checked&&cur)?('<div class="answer-exp '+(cur===q.ans?'good':'wrong')+'"><b>'+(cur===q.ans?'נכון. ':'עוד לא. ')+'</b>'+esc(q.why)+'</div>'):'';
-   return '<div class="pred-q"><label>'+(qi+1)+'. '+esc(q.q)+'</label><select data-predq="'+qi+'"><option value="">בחרו...</option>'+q.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>'+exp+'</div>';
+   return '<div class="pred-q"><label>'+(qi+1)+'. '+esc(q.q)+'</label><select data-predq="'+qi+'"><option value="">בחרו...</option>'+q.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select><div class="actions"><button class="check" data-check-pred="'+qi+'">✓ בדוק תשובה</button></div>'+exp+'</div>';
  }).join('');
- const fb=predictionFeedback?'<div class="feedback pred-feedback '+(predictionFeedbackOk?'ok':'bad')+'" aria-live="polite">'+esc(predictionFeedback)+'</div>':'';
- return '<div class="pred-quiz">'+qs+'<div class="actions"><button class="check" id="checkPrediction">✓ בדוק תחזית</button></div>'+fb+'</div>';
+ return '<div class="pred-quiz">'+qs+'</div>';
 }
 function predictionHtml(s,predText,noteText,needNote,noteVal){
  if(!s.pred)return'';
@@ -931,7 +935,7 @@ function runCurrent(){
  catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
  render();
 }
-function clearTransient(){lastResult=null;lastError='';feedback='';queryFeedback='';predictionFeedback='';predictionFeedbackOk=false;}
+function clearTransient(){lastResult=null;lastError='';feedback='';queryFeedback='';}
 function bind(){
  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();clearTransient();render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
@@ -944,26 +948,31 @@ function bind(){
  document.querySelectorAll('[data-card]').forEach(el=>el.onchange=()=>{state.structured.card[el.dataset.card]=el.value;save();render();});
  document.querySelectorAll('[data-decision]').forEach(el=>el.onchange=()=>{state.decision[el.dataset.decision]=el.value;save();render();});
  document.querySelectorAll('[data-predq]').forEach(el=>el.onchange=()=>{
-   const k=String(state.stage);
+   const k=String(state.stage), qi=String(el.dataset.predq);
    if(!state.predAnswers[k])state.predAnswers[k]={};
-   state.predAnswers[k][el.dataset.predq]=el.value;
-   state.predChecked[k]=false;
-   predictionFeedback='';predictionFeedbackOk=false;
+   state.predAnswers[k][qi]=el.value;
+   if(state.predChecked[k]===true)state.predChecked[k]={};
+   if(!state.predChecked[k]||typeof state.predChecked[k]!=='object')state.predChecked[k]={};
+   state.predChecked[k][qi]=false;
    save();render();
  });
- const checkPrediction=document.getElementById('checkPrediction');
- if(checkPrediction)checkPrediction.onclick=()=>{
-   const quiz=curr().predQuiz||[];
-   const answers=(state.predAnswers||{})[state.stage]||{};
-   if(quiz.some((q,i)=>!answers[i])){
-     predictionFeedback='ענו על כל שאלות התחזית לפני הבדיקה.';predictionFeedbackOk=false;render();return;
+ document.querySelectorAll('[data-check-pred]').forEach(btn=>btn.onclick=()=>{
+   const k=String(state.stage), qi=String(btn.dataset.checkPred);
+   const answers=(state.predAnswers||{})[k]||{};
+   if(!answers[qi]){
+     const qbox=btn.closest('.pred-q');
+     if(qbox){
+       let msg=qbox.querySelector('.pred-inline-msg');
+       if(!msg){msg=document.createElement('div');msg.className='feedback bad pred-inline-msg';qbox.appendChild(msg);}
+       msg.textContent='בחרו תשובה לפני הבדיקה.';
+     }
+     return;
    }
-   state.predChecked[state.stage]=true;
-   const correct=quiz.filter((q,i)=>answers[i]===q.ans).length;
-   predictionFeedbackOk=correct===quiz.length;
-   predictionFeedback=predictionFeedbackOk?'נכון. התחזית תואמת את מבנה הנתונים. עכשיו בדקו אותה מול ה-SQL.':'נכונות '+correct+' מתוך '+quiz.length+'. בדקו את ההסבר מתחת לכל תשובה ונסו שוב.';
+   if(state.predChecked[k]===true)state.predChecked[k]={};
+   if(!state.predChecked[k]||typeof state.predChecked[k]!=='object')state.predChecked[k]={};
+   state.predChecked[k][qi]=true;
    save();render();
- };
+ });
  const toggleRelations=document.getElementById('toggleRelations');
  if(toggleRelations)toggleRelations.onclick=()=>{state.graphOpen[state.stage]=!relationGraphOpen();save();render();};
 
