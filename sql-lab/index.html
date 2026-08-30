@@ -13,7 +13,7 @@
 .layout{max-width:1500px;margin:auto;display:grid;grid-template-columns:260px minmax(0,1fr) 270px;gap:20px;padding:22px}
 .card{background:white;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
 .steps{padding:12px;position:sticky;top:88px;height:max-content;max-height:calc(100vh - 105px);overflow:auto}.steps h3{font-size:12px;color:var(--muted);padding:4px 10px}.step{width:100%;border:0;background:transparent;border-radius:12px;padding:10px;display:flex;gap:10px;text-align:right;cursor:pointer;color:#52625a;margin-bottom:4px}.step.active{background:var(--green);color:white}.step.locked{opacity:.42;cursor:not-allowed}.n{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#eef1ee;font-size:12px;font-weight:900;flex:none}.active .n{background:rgba(255,255,255,.14)}.step b,.step small{display:block}.step b{font-size:13px}.step small{font-size:10px;margin-top:3px;color:#92a098}.active small{color:#c7d5cf}
-.main{display:flex;flex-direction:column;gap:16px}.case-brief{padding:18px 22px;border-right:4px solid var(--orange);background:var(--card)}.case-brief b{display:block;font-size:12px;color:#d95f38;margin-bottom:6px}.case-brief p{margin:0;line-height:1.7;color:var(--ink)}.hero{padding:26px;position:relative;overflow:hidden}.hero:before{content:"";position:absolute;top:0;right:0;left:0;height:4px;background:linear-gradient(270deg,var(--orange),#e8a63d,transparent)}.eyebrow{font-size:12px;font-weight:900;color:#d95f38}.hero h2{font-size:30px;margin:8px 0 12px}.context{color:var(--muted);line-height:1.75;border-right:2px solid #dfebe3;padding-right:14px}.task{background:#f5f7f4;border-radius:13px;padding:16px;margin-top:16px;line-height:1.75}.output-req{margin-top:9px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:#fbfcfb;font-size:12px;line-height:1.65}.output-req b{display:block;margin-bottom:3px}.output-req span{direction:ltr;text-align:left;display:block;font-family:Consolas,monospace}.output-toggle{margin-top:9px}.output-toggle button{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer}.output-toggle button:hover{background:#f7f9f7;color:var(--ink)}:root[data-theme="dark"] .output-toggle button:hover{background:#1a241f}:root[data-theme="dark"] .output-req{background:#152019}.prediction{margin-top:12px;border:1px solid #f0d8c9;background:#fff8f3;border-radius:12px;padding:13px;color:#76594d}.prediction-help{display:block;margin-top:7px;font-size:11px;line-height:1.55;color:#8a6d61}.prediction-answer{width:100%;min-height:72px;margin-top:10px;border:1px solid #e4cbbd;border-radius:9px;padding:10px 11px;resize:vertical;outline:0;background:#fff;color:var(--ink);font:inherit}.prediction-answer:focus{border-color:#d98b68;box-shadow:0 0 0 2px rgba(217,139,104,.12)}.pred-quiz{display:flex;flex-direction:column;gap:10px;margin-top:11px}.pred-q{border:1px solid #edd9cd;background:#fff;border-radius:10px;padding:11px}.pred-q label{display:block;font-size:12px;font-weight:900;margin-bottom:7px}.pred-q select{width:100%;border:1px solid #decfc7;border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink);font:inherit;outline:0}.pred-q select:focus{border-color:#d98b68;box-shadow:0 0 0 2px rgba(217,139,104,.12)}.pred-quiz .actions{margin-top:2px}.pred-feedback{margin-top:0}:root[data-theme="dark"] .pred-q,:root[data-theme="dark"] .pred-q select{background:#17211c;color:#e8f0eb;border-color:#46534c}
+.main{display:flex;flex-direction:column;gap:16px}.case-brief{padding:18px 22px;border-right:4px solid var(--orange);background:var(--card)}.case-brief b{display:block;font-size:12px;color:#d95f38;margin-bottom:6px}.case-brief p{margin:0;line-height:1.7;color:var(--ink)}.hero{padding:26px;position:relative;overflow:hidden}.hero:before{content:"";position:absolute;top:0;right:0;left:0;height:4px;background:linear-gradient(270deg,var(--orange),#e8a63d,transparent)}.eyebrow{font-size:12px;font-weight:900;color:#d95f38}.hero h2{font-size:30px;margin:8px 0 12px}.context{color:var(--muted);line-height:1.75;border-right:2px solid #dfebe3;padding-right:14px}.task{background:#f5f7f4;border-radius:13px;padding:16px;margin-top:16px;line-height:1.75}.output-req{margin-top:9px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:#fbfcfb;font-size:12px;line-height:1.65}.output-req b{display:block;margin-bottom:3px}.output-req span{direction:ltr;text-align:left;display:block;font-family:Consolas,monospace}.output-toggle{margin-top:9px}.output-toggle button{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer}.output-toggle button:hover{background:#f7f9f7;color:var(--ink)}:root[data-theme="dark"] .output-toggle button:hover{background:#1a241f}:root[data-theme="dark"] .output-req{background:#152019}.prediction{margin-top:12px;border:1px solid #f0d8c9;background:#fff8f3;border-radius:12px;padding:13px;color:#76594d}.prediction-help{display:block;margin-top:7px;font-size:11px;line-height:1.55;color:#8a6d61}.prediction-answer{width:100%;min-height:72px;margin-top:10px;border:1px solid #e4cbbd;border-radius:9px;padding:10px 11px;resize:vertical;outline:0;background:#fff;color:var(--ink);font:inherit}.prediction-answer:focus{border-color:#d98b68;box-shadow:0 0 0 2px rgba(217,139,104,.12)}.relational-card .prediction-answer{direction:rtl;text-align:right}.pred-quiz{display:flex;flex-direction:column;gap:10px;margin-top:11px}.pred-q{border:1px solid #edd9cd;background:#fff;border-radius:10px;padding:11px}.pred-q label{display:block;font-size:12px;font-weight:900;margin-bottom:7px}.pred-q select{width:100%;border:1px solid #decfc7;border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink);font:inherit;outline:0}.pred-q select:focus{border-color:#d98b68;box-shadow:0 0 0 2px rgba(217,139,104,.12)}.pred-quiz .actions{margin-top:2px}.pred-feedback{margin-top:0}:root[data-theme="dark"] .pred-q,:root[data-theme="dark"] .pred-q select{background:#17211c;color:#e8f0eb;border-color:#46534c}
 .sanity-card{padding:14px 17px;border:1px solid #d8e3dc;background:#f7faf8;border-right:4px solid #4f8b70}
 .sanity-card .sanity-title{font-size:12px;font-weight:900;color:#285e43;margin-bottom:5px}
 .sanity-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
@@ -372,7 +372,7 @@ function skipped(i){return (state.skipped||[]).includes(i);}
 function passed(i){return done(i)||skipped(i);}
 function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!passed(i))return i;return STAGES.length-1;}
 function allowed(i){return true;}
-function relationGraphUnlocked(){return done(state.stage)||state.attempted.includes(state.stage)||state.hint[state.stage]!==undefined;}
+function relationGraphUnlocked(){return true;}
 function relationGraphOpen(){return !!state.graphOpen[state.stage];}
 function norm(r){if(!r)return'';return JSON.stringify([r.columns,r.values.map(x=>x.map(v=>v===null?null:v)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))]);}
 function rowKey(row){return JSON.stringify(row.map(v=>v===null?null:v));}
@@ -611,6 +611,48 @@ function runnableSql(){
 
 let lastEditorCursor=null;
 let pendingRunSql=null;
+let lastRenderedStage=null;
+
+function captureViewState(){
+ if(lastRenderedStage===null||lastRenderedStage!==state.stage)return null;
+ const steps=document.querySelector('.steps');
+ const active=document.activeElement;
+ let focus=null;
+ if(active&&active!==document.body){
+   if(active.id)focus={type:'id',value:active.id};
+   else{
+     const attrs=['data-predq','data-grain','data-card','data-decision'];
+     const attr=attrs.find(a=>active.hasAttribute&&active.hasAttribute(a));
+     if(attr)focus={type:'data',attr,value:active.getAttribute(attr)};
+   }
+ }
+ return {
+   scrollY:window.scrollY,
+   stepsScroll:steps?steps.scrollTop:0,
+   editorFocused:!!(cm&&cm.hasFocus&&cm.hasFocus()),
+   editorCursor:lastEditorCursor,
+   focus
+ };
+}
+function restoreViewState(view){
+ if(!view)return;
+ requestAnimationFrame(()=>{
+   window.scrollTo(0,view.scrollY);
+   const steps=document.querySelector('.steps');
+   if(steps)steps.scrollTop=view.stepsScroll;
+   if(view.editorFocused&&cm){
+     if(view.editorCursor)cm.getDoc().setCursor(view.editorCursor);
+     cm.focus();
+     return;
+   }
+   if(view.focus){
+     let el=null;
+     if(view.focus.type==='id')el=document.getElementById(view.focus.value);
+     else if(view.focus.type==='data')el=document.querySelector('['+view.focus.attr+'="'+view.focus.value+'"]');
+     if(el&&el.focus)el.focus({preventScroll:true});
+   }
+ });
+}
 function rememberEditorCursor(){
  if(cm)lastEditorCursor=cm.getDoc().getCursor();
 }
@@ -856,6 +898,7 @@ function relationalModelHtml(s){
  if(s.intro||s.summary)return'';
  let quiz='';
  if(s.predQuiz)quiz=predictionQuizHtml(s);
+ else if(s.pred&&s.requireNote)quiz='<div class="model-prompt">'+formatStageTerms(s.pred,new Set())+'</div><textarea id="note" class="prediction-answer" placeholder="כתבו כאן תחזית או הסבר קצר לפני בדיקת השאילתה.">'+esc(state.notes[state.stage]||'')+'</textarea><small class="prediction-help">נשמר אוטומטית · נדרש לפני בדיקת השאילתה</small>';
  else if(s.pred)quiz='<div class="model-prompt">'+formatStageTerms(s.pred,new Set())+'</div>';
  const attemptedPred=!s.predQuiz||s.predQuiz.every((_,qi)=>predQuestionChecked(state.stage,qi));
  const model=(attemptedPred&&s.operation&&s.operation.model)?'<div class="model-summary"><b>איך הנתונים בנויים:</b> '+esc(s.operation.model)+'</div>':'';
@@ -943,6 +986,7 @@ function sqlSupportHtml(s,hintText,principleText){
 
 
 function render(){
+ const viewState=captureViewState();
  const s=curr(), pct=Math.round(state.completed.length/STAGES.length*100);
  const noteVal=state.notes[state.stage]||'';
  const needNote=!!s.requireNote;
@@ -970,7 +1014,7 @@ function render(){
  operationHtml(s)+
  joinVizDisclosureHtml(s)+
  sanityHtml(s,false)+
- ((s.summary||s.intro)?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="אם מסומן SQL, יורץ רק הטקסט המסומן">▶ Run Query</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button></div></div></section>')+
+ ((s.summary||s.intro)?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button></div></div></section>')+
  ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err" aria-live="polite">'+esc(lastError)+'</div>':resultHtml(lastResult))+(lastResult&&s.sanity?'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>':'')+'</section>':'')+
  (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')||queryFeedback.startsWith('התוצאה נכונה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
  (queryFeedback&&s.fanoutTrap?fanoutLessonHtml(state.sql[state.stage]||''):'')+
@@ -984,6 +1028,8 @@ function render(){
  mountEditor();
  applyTheme();
  bind();
+ restoreViewState(viewState);
+ lastRenderedStage=state.stage;
 }
 function applyTheme(){document.documentElement.setAttribute('data-theme',state.theme==='dark'?'dark':'light');}
 function mountEditor(){
