@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RouteCraft · SQL Functions & Reference</title>
+<style>
+:root{--bg:#f5f7f5;--card:#fff;--ink:#203129;--muted:#6f7d76;--line:#dce5df;--green:#2f7d5b;--soft:#eef5f1;--code:#17251f;--codeink:#e6eee9;--accent:#45548c;--warn:#fff7e8;--warnline:#e4c785}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Hebrew",sans-serif;line-height:1.6}
+a{color:inherit}.top{position:sticky;top:0;z-index:10;background:rgba(245,247,245,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1180px;margin:auto;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.kicker{font-size:11px;font-weight:900;letter-spacing:.08em;color:var(--green)}h1{font-size:22px;margin:2px 0 0}.back{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px;text-decoration:none;font-size:12px;font-weight:800}
+.wrap{max-width:1180px;margin:24px auto;padding:0 22px 48px}.intro{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:18px}
+.intro p{margin:5px 0;color:var(--muted);font-size:13px}.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.toc a{background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:6px 10px;text-decoration:none;font-size:11px;font-weight:800}
+section{scroll-margin-top:95px}.section{margin-top:24px}.section h2{font-size:17px;margin:0 0 10px}.section-note{font-size:12px;color:var(--muted);margin:-4px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.item{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px}
+.item h3{font-size:14px;margin:0 0 4px;direction:ltr;text-align:left}.item p{font-size:12px;color:var(--muted);margin:4px 0 10px}
+.syntax{direction:ltr;text-align:left;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:12px Consolas,monospace;margin-bottom:8px;overflow:auto}
+.example-label{font-size:10px;font-weight:900;color:var(--accent);margin-bottom:4px}pre{direction:ltr;text-align:left;white-space:pre-wrap;background:var(--code);color:var(--codeink);padding:11px;border-radius:9px;overflow:auto;font:12px/1.55 Consolas,monospace;margin:0}
+.result{margin-top:7px;font-size:11px;color:var(--muted)}.warning{background:var(--warn);border:1px solid var(--warnline);border-radius:10px;padding:10px 11px;margin-top:9px;font-size:11px;color:#735d2a}
+.full{grid-column:1/-1}.tip{border-right:4px solid var(--green)}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.top-inner{align-items:flex-start}.back{white-space:nowrap}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div><div class="kicker">ROUTECRAFT · SQL REFERENCE</div><h1>פונקציות וכלי SQL — עם דוגמאות</h1></div>
+  <a class="back" href="index.html">← חזרה לקורס</a>
+</div></header>
+
+<main class="wrap">
+<section class="intro">
+  <b>דף עזר, לא שלב לימוד.</b>
+  <p>חפשו כאן פונקציה או דפוס כשאתם צריכים להזכיר לעצמכם תחביר. הדוגמאות משתמשות בנתונים של RouteCraft.</p>
+  <div class="toc">
+    <a href="#core">Core</a><a href="#text">טקסט</a><a href="#date">תאריך</a><a href="#aggregate">Aggregates</a><a href="#logic">טווח ולוגיקה</a><a href="#subqueries">Subqueries</a><a href="#window">Window Functions</a>
+  </div>
+</section>
+
+<section class="section" id="core">
+<h2>Core — פונקציות שרואים בקורס</h2>
+<div class="grid">
+  <article class="item"><h3>COUNT(*)</h3><p>סופר rows, גם אם חלק מהעמודות בהן מכילות NULL.</p><div class="syntax">COUNT(*)</div><div class="example-label">דוגמה</div><pre>SELECT COUNT(*) AS route_count
+FROM routes;</pre><div class="result">מחזיר: 13.</div></article>
+
+  <article class="item"><h3>COUNT(column)</h3><p>סופר רק values שאינם NULL.</p><div class="syntax">COUNT(column)</div><div class="example-label">דוגמה</div><pre>SELECT COUNT(arrived_at) AS reported_arrivals
+FROM stops;</pre><div class="result">Stops ללא זמן הגעה לא נספרות.</div></article>
+
+  <article class="item"><h3>COUNT(DISTINCT ...)</h3><p>סופר values שונים שאינם NULL.</p><div class="syntax">COUNT(DISTINCT column)</div><div class="example-label">דוגמה</div><pre>SELECT COUNT(DISTINCT region) AS region_count
+FROM depots;</pre><div class="result">מחזיר: 5.</div></article>
+
+  <article class="item"><h3>SUM(...)</h3><p>מסכם values מספריים; NULL אינו מתווסף לסכום.</p><div class="syntax">SUM(expression)</div><div class="example-label">דוגמה</div><pre>SELECT SUM(distance_km) AS total_km
+FROM routes
+WHERE depot_id = 2;</pre><div class="result">Riverbend Crossdock: 235 ק״מ.</div></article>
+
+  <article class="item"><h3>COALESCE(...)</h3><p>מחזירה את ה-value הראשון שאינו NULL.</p><div class="syntax">COALESCE(value1, value2, ...)</div><div class="example-label">דוגמה</div><pre>SELECT stop_id,
+       COALESCE(delivered_packages, 0) AS delivered
+FROM stops;</pre><div class="result">NULL ב-delivered_packages מוצג כ-0.</div></article>
+
+  <article class="item"><h3>CASE</h3><p>ביטוי תנאי. שימושי במיוחד ב-conditional aggregation.</p><div class="syntax">CASE WHEN condition THEN value ELSE value END</div><div class="example-label">דוגמה</div><pre>SELECT service_date,
+       SUM(CASE WHEN status = 'completed'
+                THEN 1 ELSE 0 END) AS completed_routes
+FROM routes
+GROUP BY service_date;</pre></article>
+</div>
+</section>
+
+<section class="section" id="text">
+<h2>טקסט</h2>
+<div class="grid">
+  <article class="item"><h3>LENGTH(...)</h3><p>מחזירה את מספר התווים בטקסט.</p><div class="syntax">LENGTH(text)</div><div class="example-label">דוגמה</div><pre>SELECT depot_name,
+       LENGTH(depot_name) AS name_length
+FROM depots;</pre></article>
+
+  <article class="item"><h3>UPPER(...)</h3><p>ממירה טקסט לאותיות גדולות.</p><div class="syntax">UPPER(text)</div><div class="example-label">דוגמה</div><pre>SELECT depot_name,
+       UPPER(region) AS region_upper
+FROM depots;</pre></article>
+
+  <article class="item"><h3>LOWER(...)</h3><p>ממירה טקסט לאותיות קטנות.</p><div class="syntax">LOWER(text)</div><div class="example-label">דוגמה</div><pre>SELECT route_code,
+       LOWER(status) AS status_lower
+FROM routes;</pre></article>
+
+  <article class="item"><h3>||</h3><p>שרשור מחרוזות ב-SQLite.</p><div class="syntax">text1 || text2</div><div class="example-label">דוגמה</div><pre>SELECT route_code || ' · ' || status AS route_label
+FROM routes;</pre></article>
+
+  <article class="item"><h3>SUBSTR(...)</h3><p>חותכת חלק ממחרוזת. ב-SQLite האינדקס מתחיל ב-1.</p><div class="syntax">SUBSTR(text, start, length)</div><div class="example-label">דוגמה</div><pre>SELECT route_code,
+       SUBSTR(route_code, 1, 2) AS depot_prefix
+FROM routes;</pre><div class="result">לדוגמה: NG-0820-A → NG.</div></article>
+</div>
+</section>
+
+<section class="section" id="date">
+<h2>תאריך · SQLite</h2>
+<div class="grid">
+  <article class="item"><h3>DATE(...)</h3><p>מחזירה תאריך בפורמט YYYY-MM-DD מתוך ערך תאריך/שעה.</p><div class="syntax">DATE(value)</div><div class="example-label">דוגמה</div><pre>SELECT stop_id,
+       DATE(arrived_at) AS arrival_date
+FROM stops
+WHERE arrived_at IS NOT NULL;</pre></article>
+
+  <article class="item"><h3>STRFTIME(...)</h3><p>מחלצת או מעצבת חלקי תאריך ושעה.</p><div class="syntax">STRFTIME(format, value)</div><div class="example-label">דוגמה</div><pre>SELECT service_date,
+       STRFTIME('%Y', service_date) AS service_year
+FROM routes;</pre><div class="result">%Y = שנה, %m = חודש, %d = יום.</div></article>
+
+  <article class="item"><h3>DATETIME(...)</h3><p>מחזירה ערך תאריך ושעה בפורמט אחיד.</p><div class="syntax">DATETIME(value)</div><div class="example-label">דוגמה</div><pre>SELECT stop_id,
+       DATETIME(arrived_at) AS arrival_datetime
+FROM stops
+WHERE arrived_at IS NOT NULL;</pre></article>
+</div>
+</section>
+
+<section class="section" id="aggregate">
+<h2>Aggregates נוספים</h2>
+<div class="grid">
+  <article class="item"><h3>AVG(...)</h3><p>ממוצע של values שאינם NULL.</p><div class="syntax">AVG(expression)</div><div class="example-label">דוגמה</div><pre>SELECT AVG(distance_km) AS avg_route_km
+FROM routes;</pre></article>
+
+  <article class="item"><h3>MAX(...)</h3><p>ה-value הגבוה ביותר בקבוצה.</p><div class="syntax">MAX(expression)</div><div class="example-label">דוגמה</div><pre>SELECT depot_id,
+       MAX(distance_km) AS longest_route
+FROM routes
+GROUP BY depot_id;</pre></article>
+
+  <article class="item"><h3>MIN(...)</h3><p>ה-value הנמוך ביותר בקבוצה.</p><div class="syntax">MIN(expression)</div><div class="example-label">דוגמה</div><pre>SELECT depot_id,
+       MIN(distance_km) AS shortest_route
+FROM routes
+GROUP BY depot_id;</pre></article>
+</div>
+</section>
+
+<section class="section" id="logic">
+<h2>טווח ולוגיקה</h2>
+<p class="section-note">אלה operators / patterns ולא functions, אבל שימושיים כ-reference.</p>
+<div class="grid">
+  <article class="item"><h3>BETWEEN</h3><p>בודק טווח כולל שני הקצוות.</p><div class="syntax">value BETWEEN low AND high</div><div class="example-label">דוגמה</div><pre>SELECT route_code, distance_km
+FROM routes
+WHERE distance_km BETWEEN 50 AND 100;</pre></article>
+
+  <article class="item"><h3>IN</h3><p>בודק אם value נמצא ברשימת values או בתוצאת subquery.</p><div class="syntax">value IN (...)</div><div class="example-label">דוגמה</div><pre>SELECT route_code, status
+FROM routes
+WHERE status IN ('delayed', 'cancelled');</pre></article>
+
+  <article class="item full"><h3>NOT IN</h3><p>בודק ש-value אינו נמצא בקבוצה — אבל צריך להיזהר מאוד עם NULL בתוצאת subquery.</p><div class="syntax">value NOT IN (subquery)</div><div class="example-label">דוגמה מסוכנת</div><pre>SELECT shipment_id
+FROM shipments
+WHERE shipment_id NOT IN (
+  SELECT shipment_id
+  FROM route_shipments
+);</pre><div class="warning"><b>מלכודת NULL:</b> אם ה-subquery מחזירה אפילו NULL אחד, ההשוואה עלולה להפוך ל-UNKNOWN ולהחזיר תוצאה מפתיעה. לבדיקת היעדר, העדיפו בדרך כלל NOT EXISTS.</div><div class="example-label" style="margin-top:10px">הגרסה הבטוחה יותר</div><pre>SELECT s.shipment_id
+FROM shipments s
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM route_shipments rs
+  WHERE rs.shipment_id = s.shipment_id
+);</pre></article>
+</div>
+</section>
+
+<section class="section" id="subqueries">
+<h2>Subqueries</h2>
+<div class="grid">
+  <article class="item"><h3>Derived table · subquery ב-FROM</h3><p>משתמשים בתוצאת SELECT כ-relation זמנית.</p><div class="syntax">FROM (SELECT ...) alias</div><div class="example-label">דוגמה</div><pre>SELECT depot_name, total_km
+FROM (
+  SELECT d.depot_name,
+         SUM(r.distance_km) AS total_km
+  FROM depots d
+  JOIN routes r ON r.depot_id = d.depot_id
+  GROUP BY d.depot_id, d.depot_name
+) x
+WHERE total_km >= 200;</pre><div class="result">כשיש כמה שלבים, CTE עם WITH בדרך כלל קריא יותר.</div></article>
+
+  <article class="item"><h3>Scalar subquery · subquery ב-SELECT</h3><p>Subquery שמחזירה value יחיד ולכן יכולה להופיע כביטוי.</p><div class="syntax">SELECT (SELECT single_value ...)</div><div class="example-label">דוגמה</div><pre>SELECT r.route_code,
+       (
+         SELECT d.depot_name
+         FROM depots d
+         WHERE d.depot_id = r.depot_id
+       ) AS depot_name
+FROM routes r;</pre></article>
+</div>
+</section>
+
+<section class="section" id="window">
+<h2>Window Functions</h2>
+<div class="grid">
+  <article class="item tip"><h3>ROW_NUMBER() OVER (...)</h3><p>נותנת מספר רץ לכל row בתוך קבוצה, בלי לצמצם את ה-Grain.</p><div class="syntax">ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)</div><div class="example-label">דוגמה</div><pre>SELECT route_code,
+       depot_id,
+       distance_km,
+       ROW_NUMBER() OVER (
+         PARTITION BY depot_id
+         ORDER BY distance_km DESC, route_id
+       ) AS distance_rank
+FROM routes;</pre><div class="result">כל route נשארת row; רק נוסף לה דירוג בתוך ה-depot.</div></article>
+
+  <article class="item tip"><h3>SUM(...) OVER (...)</h3><p>מחשב סכום חלון ומחזיר אותו לצד כל row, במקום לקרוס ל-row אחת כמו GROUP BY.</p><div class="syntax">SUM(expression) OVER (PARTITION BY ...)</div><div class="example-label">דוגמה</div><pre>SELECT route_code,
+       depot_id,
+       distance_km,
+       SUM(distance_km) OVER (
+         PARTITION BY depot_id
+       ) AS depot_total_km
+FROM routes;</pre><div class="result">כל route נשארת נפרדת, אבל לכל אחת מופיע גם סך הק״מ של ה-depot שלה.</div></article>
+</div>
+</section>
+</main>
+</body>
+</html>
