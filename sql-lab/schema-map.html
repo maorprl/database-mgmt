@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RouteCraft · מפת Schema</title>
+<style>
+:root{--bg:#f3f5f1;--card:#fff;--ink:#14251d;--muted:#64746b;--line:#dce3dc;--green:#173d30;--orange:#e96f47;--soft:#f5f7f4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Hebrew",sans-serif}
+.top{position:sticky;top:0;z-index:5;background:rgba(243,245,241,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1500px;margin:auto;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.kicker{font-size:11px;font-weight:900;letter-spacing:.08em;color:var(--orange)}
+h1{font-size:22px;margin:4px 0 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:9px 12px;font-weight:800;text-decoration:none;cursor:pointer;font:inherit}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.wrap{max-width:1500px;margin:auto;padding:22px}
+.intro{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:18px}
+.intro p{margin:0;max-width:900px;color:var(--muted);line-height:1.65;font-size:13px}
+.legend{display:flex;gap:8px;flex-wrap:wrap;direction:ltr}
+.badge{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 9px;font:700 11px Consolas,monospace}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(250px,1fr));gap:14px;align-items:start}
+.relation{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;break-inside:avoid;box-shadow:0 6px 18px rgba(25,55,43,.04)}
+.rel-head{background:var(--green);color:#fff;padding:12px 14px;direction:ltr;text-align:left}
+.rel-head b{font:800 14px Consolas,monospace}
+table{width:100%;border-collapse:collapse;table-layout:fixed;direction:ltr;text-align:left;font-size:10.5px}
+th,td{padding:7px 8px;border-bottom:1px solid #e8ece8;vertical-align:top;overflow-wrap:anywhere}
+th{background:#f0f4f1;color:#51665b;font-weight:900}
+th:first-child,td:first-child{width:43%}
+th:nth-child(2),td:nth-child(2){width:57%}
+td.attr{font:700 10.5px Consolas,monospace;color:#31483d}
+td.domain{unicode-bidi:plaintext;color:#5c6e64}
+tr:last-child td{border-bottom:0}
+.key{display:inline-block;margin-inline-start:5px;padding:1px 4px;border-radius:5px;font:700 9px Consolas,monospace;background:#edf7f1;color:#285e43}
+.key.fk{background:#fff4eb;color:#8b593c}.key.unique{background:#f3eefb;color:#655084}
+.note{margin-top:17px;padding:11px 13px;background:var(--soft);border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:12px;line-height:1.55}
+@media(max-width:1200px){.grid{grid-template-columns:repeat(3,minmax(240px,1fr))}}
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,minmax(240px,1fr))}.intro{display:block}.legend{margin-top:12px}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.top-inner{align-items:flex-start;flex-direction:column}.wrap{padding:14px}}
+@page{size:A3 landscape;margin:9mm}
+@media print{
+ body{background:#fff}.top{position:static;background:#fff;border:0}.top-inner{padding:0 0 7mm}.actions{display:none}.wrap{max-width:none;padding:0}
+ .intro{margin-bottom:5mm}.intro p{font-size:9pt}.grid{grid-template-columns:repeat(4,1fr);gap:4mm}
+ .relation{box-shadow:none;border-radius:7px}.rel-head{padding:3mm 3.5mm}.rel-head b{font-size:9.5pt}
+ table{font-size:7.3pt}th,td{padding:2.1mm 2mm}td.attr{font-size:7.3pt}.badge{font-size:7pt;padding:1.5mm 2mm}.note{margin-top:4mm;font-size:7.5pt;padding:2.5mm 3mm}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div><div class="kicker">ROUTECRAFT · SQL LAB</div><h1>מפת Schema מלאה</h1></div>
+  <div class="actions"><a class="btn" href="./">← חזרה למעבדה</a><button class="btn primary" onclick="window.print()">הדפס / שמור PDF</button></div>
+</div></header>
+<main class="wrap">
+<section class="intro">
+  <p>כל 8 ה-relations על מסך אחד. הדף מציג attributes, domains ואילוצי PK / FK / UNIQUE, אבל <b>לא</b> מציג קווי קשרים או cardinality — כדי שתוכלו למפות אותם בעצמכם.</p>
+  <div class="legend"><span class="badge">PK = Primary Key</span><span class="badge">FK = Foreign Key</span><span class="badge">UNIQUE</span></div>
+</section>
+<section class="grid">
+
+<article class="relation"><div class="rel-head"><b>depots</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">depot_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה depot</td></tr>
+<tr><td class="attr">depot_name</td><td class="domain">TEXT · שם אתר תפעולי</td></tr>
+<tr><td class="attr">region</td><td class="domain">{North, Central, West, Jerusalem, South}</td></tr>
+<tr><td class="attr">opened_at</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>drivers</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">driver_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה נהג</td></tr>
+<tr><td class="attr">depot_id <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→depots</td></tr>
+<tr><td class="attr">driver_name</td><td class="domain">TEXT · שם נהג</td></tr>
+<tr><td class="attr">license_class</td><td class="domain">{B, C, C1} או NULL</td></tr>
+<tr><td class="attr">hired_at</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>vehicles</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">vehicle_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה רכב</td></tr>
+<tr><td class="attr">depot_id <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→depots</td></tr>
+<tr><td class="attr">plate_no <span class="key unique">UNIQUE</span></td><td class="domain">TEXT</td></tr>
+<tr><td class="attr">vehicle_type</td><td class="domain">{bike, van, truck}</td></tr>
+<tr><td class="attr">capacity_kg</td><td class="domain">INTEGER · קילוגרמים</td></tr>
+<tr><td class="attr">active</td><td class="domain">INTEGER · 0 או 1</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>vehicle_trackers</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">tracker_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה התקן</td></tr>
+<tr><td class="attr">vehicle_id <span class="key fk">FK</span> <span class="key unique">UNIQUE</span></td><td class="domain">INTEGER · FK→vehicles</td></tr>
+<tr><td class="attr">installed_at</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
+<tr><td class="attr">retired_at</td><td class="domain">DATE או NULL</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>routes</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">route_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה route</td></tr>
+<tr><td class="attr">depot_id <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→depots</td></tr>
+<tr><td class="attr">vehicle_id <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→vehicles</td></tr>
+<tr><td class="attr">route_code <span class="key unique">UNIQUE</span></td><td class="domain">TEXT</td></tr>
+<tr><td class="attr">service_date</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
+<tr><td class="attr">status</td><td class="domain">{planned, completed, delayed, cancelled}</td></tr>
+<tr><td class="attr">distance_km</td><td class="domain">INTEGER · קילומטרים</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>stops</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">stop_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה stop</td></tr>
+<tr><td class="attr">route_id <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→routes</td></tr>
+<tr><td class="attr">stop_seq</td><td class="domain">INTEGER · סדר במסלול</td></tr>
+<tr><td class="attr">city</td><td class="domain">TEXT · יעד</td></tr>
+<tr><td class="attr">planned_packages</td><td class="domain">INTEGER · חבילות מתוכננות</td></tr>
+<tr><td class="attr">delivered_packages</td><td class="domain">INTEGER או NULL</td></tr>
+<tr><td class="attr">arrival_status</td><td class="domain">{on_time, late, missed, pending}</td></tr>
+<tr><td class="attr">arrived_at</td><td class="domain">DATETIME או NULL</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>shipments</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">shipment_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה shipment</td></tr>
+<tr><td class="attr">tracking_code <span class="key unique">UNIQUE</span></td><td class="domain">TEXT</td></tr>
+<tr><td class="attr">priority</td><td class="domain">{standard, express, cold}</td></tr>
+<tr><td class="attr">promised_date</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
+<tr><td class="attr">total_weight_kg</td><td class="domain">INTEGER · קילוגרמים</td></tr>
+<tr><td class="attr">status</td><td class="domain">{ready, planned, in_transit, delayed, delivered}</td></tr>
+<tr><td class="attr">delivered_at</td><td class="domain">DATE או NULL</td></tr>
+</tbody></table></article>
+
+<article class="relation"><div class="rel-head"><b>route_shipments</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
+<tr><td class="attr">route_id <span class="key">PK</span> <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→routes</td></tr>
+<tr><td class="attr">shipment_id <span class="key">PK</span> <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→shipments</td></tr>
+<tr><td class="attr">loaded_at</td><td class="domain">DATETIME</td></tr>
+<tr><td class="attr">unloaded_at</td><td class="domain">DATETIME או NULL</td></tr>
+</tbody></table></article>
+
+</section>
+<div class="note"><b>לעבודה במחברת:</b> אפשר להדפיס את הדף ולכתוב ליד כל relation מה row אחת מייצגת, ואז לצייר בעצמכם את הקשרים וה-cardinality. ה-FK אומר לאיזה key הוא מפנה; הוא לא אומר לבדו כמה rows יכולים להתאים.</div>
+</main>
+</body>
+</html>
