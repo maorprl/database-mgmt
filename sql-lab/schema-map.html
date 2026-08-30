@@ -42,9 +42,23 @@ tr:last-child td{border-bottom:0}
 @media print{
  body{background:#fff}.top{position:static;background:#fff;border:0}.top-inner{padding:0 0 7mm}.actions{display:none}.wrap{max-width:none;padding:0}
  .intro{margin-bottom:5mm}.intro p{font-size:9pt}.grid{grid-template-columns:repeat(4,1fr);gap:4mm}
- .relation{box-shadow:none;border-radius:7px}.rel-head{padding:3mm 3.5mm}.rel-head b{font-size:9.5pt}
+ .relation{box-shadow:none;border-radius:7px}.rel-head{padding:3mm 3.5mm}.rel-head b{font-size:9.5pt}.checkbtn,.map-feedback{display:none!important}.mapping-section{break-before:page}
  table{font-size:7.3pt}th,td{padding:2.1mm 2mm}td.attr{font-size:7.3pt}.badge{font-size:7pt;padding:1.5mm 2mm}.note{margin-top:4mm;font-size:7.5pt;padding:2.5mm 3mm}
 }
+
+.map-work{padding:10px 12px 12px;border-top:1px solid var(--line);background:#fbfcfb}
+.map-work label{display:block;font-size:10px;font-weight:900;color:#51665b;margin-bottom:6px}
+.map-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center}
+.map-row select,.card-map select{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:7px 8px;font:11px Arial,"Noto Sans Hebrew",sans-serif}
+.checkbtn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 9px;font:800 10px Arial,"Noto Sans Hebrew",sans-serif;cursor:pointer;white-space:nowrap}
+.map-feedback{margin-top:6px;font-size:10px;line-height:1.45;padding:6px 8px;border-radius:7px}
+.map-feedback.good{background:#edf7f1;color:#285e43}.map-feedback.bad{background:#fff1ec;color:#8c4d35}
+.mapping-section{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.mapping-section h2{font-size:16px;margin:0 0 5px}.mapping-section>p{margin:0 0 13px;color:var(--muted);font-size:12px;line-height:1.55}
+.card-map{display:grid;grid-template-columns:minmax(180px,1fr) minmax(150px,220px) auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #edf0ed;direction:ltr;text-align:left}
+.card-map:last-child{border-bottom:0}.card-map .pair{font:800 11px Consolas,monospace}.card-map .map-feedback{grid-column:1/-1;margin-top:0;direction:rtl;text-align:right}
+@media(max-width:700px){.card-map{grid-template-columns:1fr}.card-map .map-feedback{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -54,7 +68,7 @@ tr:last-child td{border-bottom:0}
 </div></header>
 <main class="wrap">
 <section class="intro">
-  <p>כל 8 ה-relations על מסך אחד. הדף מציג attributes, domains ואילוצי PK / FK / UNIQUE, אבל <b>לא</b> מציג קווי קשרים או cardinality — כדי שתוכלו למפות אותם בעצמכם.</p>
+  <p>כל 8 ה-relations על מסך אחד. זהו דף המיפוי הראשוני: קבעו מה row אחת מייצגת בכל relation ואת ה-cardinality של הקשרים. ה-attributes, ה-keys והאילוצים גלויים; התשובות אינן מסומנות מראש.</p>
   <div class="legend"><span class="badge">PK = Primary Key</span><span class="badge">FK = Foreign Key</span><span class="badge">UNIQUE</span></div>
 </section>
 <section class="grid">
@@ -64,7 +78,7 @@ tr:last-child td{border-bottom:0}
 <tr><td class="attr">depot_name</td><td class="domain">TEXT · שם אתר תפעולי</td></tr>
 <tr><td class="attr">region</td><td class="domain">{North, Central, West, Jerusalem, South}</td></tr>
 <tr><td class="attr">opened_at</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="depots"><option value="">בחרו...</option><option value="depot">depot אחד</option><option value="driver">driver אחד</option><option value="route">route אחת</option><option value="shipment">shipment אחד</option></select><button class="checkbtn" data-check-grain="depots">בדוק</button></div><div class="map-feedback" data-feedback-grain="depots" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>drivers</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">driver_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה נהג</td></tr>
@@ -72,7 +86,7 @@ tr:last-child td{border-bottom:0}
 <tr><td class="attr">driver_name</td><td class="domain">TEXT · שם נהג</td></tr>
 <tr><td class="attr">license_class</td><td class="domain">{B, C, C1} או NULL</td></tr>
 <tr><td class="attr">hired_at</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="drivers"><option value="">בחרו...</option><option value="depot">depot אחד</option><option value="driver">driver אחד</option><option value="vehicle">vehicle אחד</option><option value="route">route אחת</option></select><button class="checkbtn" data-check-grain="drivers">בדוק</button></div><div class="map-feedback" data-feedback-grain="drivers" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>vehicles</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">vehicle_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה רכב</td></tr>
@@ -81,14 +95,14 @@ tr:last-child td{border-bottom:0}
 <tr><td class="attr">vehicle_type</td><td class="domain">{bike, van, truck}</td></tr>
 <tr><td class="attr">capacity_kg</td><td class="domain">INTEGER · קילוגרמים</td></tr>
 <tr><td class="attr">active</td><td class="domain">INTEGER · 0 או 1</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="vehicles"><option value="">בחרו...</option><option value="depot">depot אחד</option><option value="driver">driver אחד</option><option value="vehicle">vehicle אחד</option><option value="route">route אחת</option></select><button class="checkbtn" data-check-grain="vehicles">בדוק</button></div><div class="map-feedback" data-feedback-grain="vehicles" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>vehicle_trackers</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">tracker_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה התקן</td></tr>
 <tr><td class="attr">vehicle_id <span class="key fk">FK</span> <span class="key unique">UNIQUE</span></td><td class="domain">INTEGER · FK→vehicles</td></tr>
 <tr><td class="attr">installed_at</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
 <tr><td class="attr">retired_at</td><td class="domain">DATE או NULL</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="vehicle_trackers"><option value="">בחרו...</option><option value="vehicle">vehicle אחד</option><option value="tracker">tracker אחד</option><option value="route">route אחת</option><option value="assignment">שיוך אחד</option></select><button class="checkbtn" data-check-grain="vehicle_trackers">בדוק</button></div><div class="map-feedback" data-feedback-grain="vehicle_trackers" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>routes</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">route_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה route</td></tr>
@@ -98,7 +112,7 @@ tr:last-child td{border-bottom:0}
 <tr><td class="attr">service_date</td><td class="domain">DATE · YYYY-MM-DD</td></tr>
 <tr><td class="attr">status</td><td class="domain">{planned, completed, delayed, cancelled}</td></tr>
 <tr><td class="attr">distance_km</td><td class="domain">INTEGER · קילומטרים</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="routes"><option value="">בחרו...</option><option value="depot">depot אחד</option><option value="vehicle">vehicle אחד</option><option value="route">route אחת</option><option value="stop">stop אחת</option></select><button class="checkbtn" data-check-grain="routes">בדוק</button></div><div class="map-feedback" data-feedback-grain="routes" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>stops</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">stop_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה stop</td></tr>
@@ -109,7 +123,7 @@ tr:last-child td{border-bottom:0}
 <tr><td class="attr">delivered_packages</td><td class="domain">INTEGER או NULL</td></tr>
 <tr><td class="attr">arrival_status</td><td class="domain">{on_time, late, missed, pending}</td></tr>
 <tr><td class="attr">arrived_at</td><td class="domain">DATETIME או NULL</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="stops"><option value="">בחרו...</option><option value="route">route אחת</option><option value="stop">stop אחת</option><option value="shipment">shipment אחד</option><option value="city">city אחת</option></select><button class="checkbtn" data-check-grain="stops">בדוק</button></div><div class="map-feedback" data-feedback-grain="stops" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>shipments</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">shipment_id <span class="key">PK</span></td><td class="domain">INTEGER · מזהה shipment</td></tr>
@@ -119,17 +133,62 @@ tr:last-child td{border-bottom:0}
 <tr><td class="attr">total_weight_kg</td><td class="domain">INTEGER · קילוגרמים</td></tr>
 <tr><td class="attr">status</td><td class="domain">{ready, planned, in_transit, delayed, delivered}</td></tr>
 <tr><td class="attr">delivered_at</td><td class="domain">DATE או NULL</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="shipments"><option value="">בחרו...</option><option value="route">route אחת</option><option value="stop">stop אחת</option><option value="shipment">shipment אחד</option><option value="assignment">שיוך אחד</option></select><button class="checkbtn" data-check-grain="shipments">בדוק</button></div><div class="map-feedback" data-feedback-grain="shipments" hidden></div></div></article>
 
 <article class="relation"><div class="rel-head"><b>route_shipments</b></div><table><thead><tr><th>Attribute</th><th>Domain / constraint</th></tr></thead><tbody>
 <tr><td class="attr">route_id <span class="key">PK</span> <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→routes</td></tr>
 <tr><td class="attr">shipment_id <span class="key">PK</span> <span class="key fk">FK</span></td><td class="domain">INTEGER · FK→shipments</td></tr>
 <tr><td class="attr">loaded_at</td><td class="domain">DATETIME</td></tr>
 <tr><td class="attr">unloaded_at</td><td class="domain">DATETIME או NULL</td></tr>
-</tbody></table></article>
+</tbody></table><div class="map-work"><label>Row אחת מייצגת:</label><div class="map-row"><select data-grain="route_shipments"><option value="">בחרו...</option><option value="route">route אחת</option><option value="shipment">shipment אחד</option><option value="assignment">שיוך route↔shipment אחד</option><option value="depot">depot אחד</option></select><button class="checkbtn" data-check-grain="route_shipments">בדוק</button></div><div class="map-feedback" data-feedback-grain="route_shipments" hidden></div></div></article>
 
 </section>
+<section class="mapping-section"><h2>מיפוי קשרים</h2><p>קבעו את ה-cardinality מתוך ה-keys והאילוצים. אין כאן תשובות מסומנות מראש; כל קשר נבדק בנפרד.</p><div class="card-map"><div class="pair">depots → drivers</div><select data-card="depot_drivers"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="depot_drivers">בדוק</button><div class="map-feedback" data-feedback-card="depot_drivers" hidden></div></div><div class="card-map"><div class="pair">depots → vehicles</div><select data-card="depot_vehicles"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="depot_vehicles">בדוק</button><div class="map-feedback" data-feedback-card="depot_vehicles" hidden></div></div><div class="card-map"><div class="pair">depots → routes</div><select data-card="depot_routes"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="depot_routes">בדוק</button><div class="map-feedback" data-feedback-card="depot_routes" hidden></div></div><div class="card-map"><div class="pair">vehicles → vehicle_trackers</div><select data-card="veh_tracker"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="veh_tracker">בדוק</button><div class="map-feedback" data-feedback-card="veh_tracker" hidden></div></div><div class="card-map"><div class="pair">vehicles → routes</div><select data-card="vehicle_routes"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="vehicle_routes">בדוק</button><div class="map-feedback" data-feedback-card="vehicle_routes" hidden></div></div><div class="card-map"><div class="pair">routes → stops</div><select data-card="route_stops"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="route_stops">בדוק</button><div class="map-feedback" data-feedback-card="route_stops" hidden></div></div><div class="card-map"><div class="pair">routes ↔ shipments</div><select data-card="route_shipments"><option value="">בחרו...</option><option value="1:1">1:1 — אחד לאחד</option><option value="1:M">1:M — אחד לרבים</option><option value="M:M">M:M — רבים לרבים</option></select><button class="checkbtn" data-check-card="route_shipments">בדוק</button><div class="map-feedback" data-feedback-card="route_shipments" hidden></div></div></section>
 <div class="note"><b>לעבודה במחברת:</b> אפשר להדפיס את הדף ולכתוב ליד כל relation מה row אחת מייצגת, ואז לצייר בעצמכם את הקשרים וה-cardinality. ה-FK אומר לאיזה key הוא מפנה; הוא לא אומר לבדו כמה rows יכולים להתאים.</div>
 </main>
+
+<script>
+(function(){
+ const STORAGE_KEY='routecraft-sql-lab-v1';
+ const grainCorrect={"depots":{"ans":"depot","why":"depot_id הוא Primary Key, ולכן כל row מייצגת depot אחד."},"drivers":{"ans":"driver","why":"driver_id הוא Primary Key, ולכן כל row מייצגת driver אחד."},"vehicles":{"ans":"vehicle","why":"vehicle_id הוא Primary Key, ולכן כל row מייצגת vehicle אחד."},"vehicle_trackers":{"ans":"tracker","why":"tracker_id הוא Primary Key, ולכן כל row מייצגת tracker אחד."},"routes":{"ans":"route","why":"route_id הוא Primary Key, ולכן כל row מייצגת route אחת."},"stops":{"ans":"stop","why":"stop_id הוא Primary Key, ולכן כל row מייצגת stop אחת."},"shipments":{"ans":"shipment","why":"shipment_id הוא Primary Key, ולכן כל row מייצגת shipment אחד."},"route_shipments":{"ans":"assignment","why":"ה-Primary Key המורכב route_id + shipment_id מזהה שיוך אחד בין route ל-shipment."}};
+ const cardCorrect={"depot_drivers":{"ans":"1:M","why":"drivers.depot_id אינו UNIQUE, ולכן depot אחד יכול להיות קשור לכמה drivers."},"depot_vehicles":{"ans":"1:M","why":"vehicles.depot_id אינו UNIQUE, ולכן depot אחד יכול להיות קשור לכמה vehicles."},"depot_routes":{"ans":"1:M","why":"routes.depot_id אינו UNIQUE, ולכן depot אחד יכול להיות קשור לכמה routes."},"veh_tracker":{"ans":"1:1","why":"vehicle_trackers.vehicle_id הוא UNIQUE, ולכן לכל vehicle יש לכל היותר tracker אחד. אופציונליות היא שאלה נפרדת."},"vehicle_routes":{"ans":"1:M","why":"routes.vehicle_id אינו UNIQUE, ולכן vehicle אחד יכול להופיע בכמה routes לאורך הזמן."},"route_stops":{"ans":"1:M","why":"stops.route_id אינו UNIQUE, ולכן route אחת יכולה להכיל כמה stops."},"route_shipments":{"ans":"M:M","why":"route_shipments הוא relation גשר: route יכולה להיות קשורה לכמה shipments וגם shipment לכמה routes."}};
+ function load(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}}
+ function save(x){localStorage.setItem(STORAGE_KEY,JSON.stringify(x));}
+ let st=load();
+ st.structured=st.structured||{grain:{},card:{}};
+ st.structured.grain=st.structured.grain||{};
+ st.structured.card=st.structured.card||{};
+ st.schemaMapChecked=st.schemaMapChecked||{grain:{},card:{}};
+ st.schemaMapChecked.grain=st.schemaMapChecked.grain||{};
+ st.schemaMapChecked.card=st.schemaMapChecked.card||{};
+ function paint(kind,key){
+   const sel=document.querySelector('[data-'+kind+'="'+key+'"]');
+   const box=document.querySelector('[data-feedback-'+kind+'="'+key+'"]');
+   if(!sel||!box)return;
+   const meta=(kind==='grain'?grainCorrect:cardCorrect)[key];
+   const checked=!!st.schemaMapChecked[kind][key];
+   if(!checked){box.hidden=true;box.textContent='';box.className='map-feedback';return;}
+   if(!sel.value){box.hidden=false;box.className='map-feedback bad';box.textContent='בחרו תשובה לפני הבדיקה.';return;}
+   const ok=sel.value===meta.ans;
+   box.hidden=false;box.className='map-feedback '+(ok?'good':'bad');
+   box.textContent=(ok?'נכון. ':'עוד לא. ')+meta.why;
+ }
+ document.querySelectorAll('[data-grain]').forEach(sel=>{
+   const key=sel.dataset.grain;
+   sel.value=st.structured.grain[key]||'';
+   sel.addEventListener('change',()=>{st.structured.grain[key]=sel.value;st.schemaMapChecked.grain[key]=false;save(st);paint('grain',key);});
+   paint('grain',key);
+ });
+ document.querySelectorAll('[data-card]').forEach(sel=>{
+   const key=sel.dataset.card;
+   sel.value=st.structured.card[key]||'';
+   sel.addEventListener('change',()=>{st.structured.card[key]=sel.value;st.schemaMapChecked.card[key]=false;save(st);paint('card',key);});
+   paint('card',key);
+ });
+ document.querySelectorAll('[data-check-grain]').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.checkGrain;st.schemaMapChecked.grain[key]=true;save(st);paint('grain',key);}));
+ document.querySelectorAll('[data-check-card]').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.checkCard;st.schemaMapChecked.card[key]=true;save(st);paint('card',key);}));
+})();
+</script>
+
 </body>
 </html>
