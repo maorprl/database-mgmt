@@ -25,7 +25,7 @@
 .sanity-card .sanity-feedback{margin-top:10px;padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.6}
 .sanity-card .sanity-feedback.good{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}
 .sanity-card .sanity-feedback.bad{background:#fff5f1;border:1px solid #efc9bc;color:#864b38}
-.inline-ltr{display:inline-block;direction:ltr;unicode-bidi:isolate;font-family:Consolas,"Courier New",monospace;font-size:.96em}
+.error-details{margin-top:9px}.error-details summary{cursor:pointer;font-size:11px;font-weight:800}.error-details p{margin:7px 0 0;white-space:normal}.inline-ltr{display:inline-block;direction:ltr;unicode-bidi:isolate;font-family:Consolas,"Courier New",monospace;font-size:.96em}
 .sanity-card p,.sanity-feedback,.result-verify{direction:rtl;text-align:right}
 .sanity-sql-help{margin:10px 0 12px}
 .sanity-sql-help summary{cursor:pointer;font-weight:800;color:#4c685a}
@@ -59,7 +59,7 @@
 .relational-card .pred-quiz{margin-top:12px}
 .scratch-details,.viz-details{overflow:hidden}
 .scratch-details summary,.viz-details summary{cursor:pointer;padding:13px 16px;font-weight:800;font-size:12px;color:#52675d}
-.scratch-card-inner{padding:0 16px 16px}
+.scratch-card-inner{padding:0 16px 16px}.scratch-meta{margin:7px 0 9px;font-size:10px;color:var(--muted);font-weight:700}
 .scratch-card-inner small{display:block;color:var(--muted);line-height:1.55}
 .scratch-card-inner textarea{width:100%;min-height:88px;margin-top:9px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;resize:vertical;background:#fff;color:var(--ink);font:13px/1.55 Consolas,monospace;direction:ltr;text-align:left}
 .viz-details-inner{padding:0 14px 14px}
@@ -108,7 +108,7 @@
 .subq{padding:14px;border:1px solid #e4e9e5;border-radius:12px;background:#fafbf9}.subq p{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.55}.divider{height:1px;background:#e7ebe7}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.check,.hintbtn,.solutionbtn{border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}.check{border:0;background:var(--green);color:white}.hintbtn,.solutionbtn{border:1px solid var(--line);background:white}.feedback{margin-top:13px;padding:12px;border-radius:10px;line-height:1.6}.ok{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}.bad{background:#fff5f1;border:1px solid #efc9bc;color:#864b38}.hintbox,.solutionbox{margin-top:12px;padding:12px;border-radius:10px}.hintbox{background:#fffaf0;border:1px solid #ead8aa;color:#74633f}.solutionbox{background:#f8faf8;border:1px solid var(--line)}.solutionbox pre{direction:ltr;text-align:left;white-space:pre-wrap;background:#17251f;color:#e6eee9;padding:12px;border-radius:8px;overflow:auto}
 .nav{display:flex;justify-content:space-between}.nav button{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer}.nav .next{background:var(--green);color:white}.nav .skip{border-style:dashed;color:#6c756f;background:#f8faf8}.nav button:disabled{opacity:.4}
-.side{position:sticky;top:88px;height:max-content;display:flex;flex-direction:column;gap:14px}.side .card{padding:16px}.side h3{font-size:12px;margin:0 0 10px;color:#4c685a}.schema button{border:0;background:#eef3ef;border-radius:8px;padding:7px 9px;margin:3px;font:11px Consolas;cursor:pointer}.schema button.sel{background:var(--green);color:white}.schemabox{margin-top:10px;font:11px/1.65 Consolas;direction:ltr;text-align:left;color:#53645b}.schema-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:10px;direction:ltr;text-align:left;font-size:11px}.schema-table th,.schema-table td{padding:7px 5px;border-bottom:1px solid #e8ece8;vertical-align:top;min-width:0}.schema-table th:first-child,.schema-table td:first-child{width:46%}.schema-table th:nth-child(2),.schema-table td:nth-child(2){width:54%}.schema-table th{color:#6b7b72;font-weight:800}.schema-table .attr{font-family:Consolas,monospace;font-weight:800;color:#31483d;overflow-wrap:anywhere}.schema-table .domain{direction:ltr;text-align:left;unicode-bidi:plaintext;overflow-wrap:anywhere;color:#5c6e64;font-family:Arial,"Noto Sans Hebrew",sans-serif}.schema-note{margin-top:10px;padding:9px 10px;background:#f5f7f4;border-radius:9px;color:#66766d;font-size:11px;line-height:1.55}.data-preview{margin-top:14px}.data-preview h4{margin:0 0 7px;font-size:11px;color:#4c685a}.data-preview .tablewrap{max-height:220px;overflow:auto;border:1px solid #e3e8e3;border-radius:9px}.data-preview table{font-size:10px;direction:ltr;text-align:left;white-space:nowrap}.data-preview th,.data-preview td{padding:6px 7px}.principles ul{padding-right:18px;margin:0}.principles li{font-size:12px;line-height:1.6;color:#607168;margin:5px 0}
+.side{position:sticky;top:88px;height:max-content;display:flex;flex-direction:column;gap:14px}.side .card{padding:16px}.side h3{font-size:12px;margin:0 0 10px;color:#4c685a}.schema button{border:0;background:#eef3ef;border-radius:8px;padding:7px 9px;margin:3px;font:11px Consolas;cursor:pointer}.schema button.sel{background:var(--green);color:white}.schemabox{margin-top:10px;font:11px/1.65 Consolas;direction:ltr;text-align:left;color:#53645b}.schema-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:10px;direction:ltr;text-align:left;font-size:11px}.schema-table th,.schema-table td{padding:7px 5px;border-bottom:1px solid #e8ece8;vertical-align:top;min-width:0}.schema-table th:first-child,.schema-table td:first-child{width:46%}.schema-table th:nth-child(2),.schema-table td:nth-child(2){width:54%}.schema-table th{color:#6b7b72;font-weight:800}.schema-table .attr{font-family:Consolas,monospace;font-weight:800;color:#31483d;overflow-wrap:anywhere}.schema-table .domain{direction:ltr;text-align:left;unicode-bidi:plaintext;overflow-wrap:anywhere;color:#5c6e64;font-family:Arial,"Noto Sans Hebrew",sans-serif}.schema-note{margin-top:10px;padding:9px 10px;background:#f5f7f4;border-radius:9px;color:#66766d;font-size:11px;line-height:1.55}.data-preview{margin-top:14px}.data-preview h4{margin:0 0 7px;font-size:11px;color:#4c685a}.preview-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 7px;font-size:10px;color:var(--muted)}.preview-controls button{padding:4px 7px!important;margin:0!important;border:1px solid var(--line)!important;background:#f8faf8!important;font:10px Arial,"Noto Sans Hebrew",sans-serif!important}.preview-controls button:disabled{opacity:.45;cursor:default}.data-preview .tablewrap{max-height:220px;overflow:auto;border:1px solid #e3e8e3;border-radius:9px}.data-preview table{font-size:10px;direction:ltr;text-align:left;white-space:nowrap}.data-preview th,.data-preview td{padding:6px 7px}.principles ul{padding-right:18px;margin:0}.principles li{font-size:12px;line-height:1.6;color:#607168;margin:5px 0}
 .glossary details{font-size:12px}.glossary summary{cursor:pointer;font-weight:900;color:#4c685a;list-style:none}.glossary summary::-webkit-details-marker{display:none}.glossary summary:before{content:"▸";display:inline-block;margin-left:6px;transition:transform .15s}.glossary details[open] summary:before{transform:rotate(90deg)}.glossary-list{margin-top:12px;display:flex;flex-direction:column;gap:9px}.glossary-item{padding-bottom:8px;border-bottom:1px solid #edf0ed;line-height:1.55}.glossary-item:last-child{border-bottom:0}.glossary-item b{direction:ltr;unicode-bidi:isolate;color:#31483d}.intro-map{display:flex;flex-direction:column;gap:12px}.intro-hierarchy{direction:ltr;text-align:center;font:700 13px/1.8 Consolas,monospace;background:#f5f7f4;border:1px solid #e4e9e5;border-radius:12px;padding:16px}.intro-terms{display:grid;grid-template-columns:1fr 1fr;gap:10px}.intro-term{background:#fafbf9;border:1px solid #e4e9e5;border-radius:10px;padding:11px;line-height:1.6}.intro-note{padding:12px;border-radius:10px;background:#fff8f3;border:1px solid #f0d8c9;line-height:1.7}
 .relation-compare{display:grid;grid-template-columns:1fr 44px 1fr;gap:12px;align-items:stretch;margin-top:4px}.relation-visual{border:1px solid #e4e9e5;border-radius:12px;background:#fafbf9;padding:14px;min-width:0}.relation-visual h4{margin:0 0 10px;font-size:13px}.set-box{direction:ltr;text-align:left;font:12px/1.75 Consolas,monospace;background:#f5f7f4;border:1px dashed #cad6ce;border-radius:999px;padding:18px 22px;min-height:150px;display:flex;align-items:center}.set-box pre{margin:0;white-space:pre-wrap}.visual-eq{display:grid;place-items:center;font-size:24px;font-weight:900;color:#8da097}.mini-rel-table{width:100%;font-size:11px;direction:ltr;text-align:left;min-width:0}.mini-rel-table th,.mini-rel-table td{padding:7px 8px}.visual-caption{margin-top:9px;font-size:11px;line-height:1.55;color:var(--muted)}@media(max-width:760px){.relation-compare{grid-template-columns:1fr}.visual-eq{transform:rotate(90deg);min-height:30px}}
 @media(max-width:1050px){.layout{grid-template-columns:220px 1fr}.side{grid-column:2;position:static;display:grid;grid-template-columns:1fr 1fr}.top{grid-template-columns:1fr auto}.progress{display:none}}
@@ -126,7 +126,7 @@
 .ghostbtn{border:1px solid var(--line);background:white;border-radius:9px;padding:9px 11px;font-weight:800;cursor:pointer;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .clearbtn{border:1px dashed var(--line);background:#f8faf8;color:#6c756f;border-radius:10px;padding:9px 14px;font-weight:800;cursor:pointer}
 .schema-relations{display:flex;flex-wrap:wrap;gap:4px}.relation-chip{display:inline-flex;align-items:center;background:#eef3ef;border-radius:8px;overflow:hidden;margin:2px}.schema .relation-chip button{margin:0;border-radius:0}.schema .relation-chip .insert-mini{padding:7px 6px;border-right:1px solid #d8e1da;background:#f7faf8;color:#47705e;font-weight:900}.schema .relation-chip .insert-mini:hover,.insert-attr:hover,.preview-value:hover{background:#e5f1e9;color:#173d30}.attr-cell{display:flex;align-items:flex-start;justify-content:flex-start;gap:4px;min-width:0;white-space:normal;overflow-wrap:anywhere}.insert-attr{border:0!important;background:transparent!important;margin:0!important;padding:2px 3px!important;color:#47705e;font-weight:900;cursor:pointer;line-height:1}.preview-value{border:0;background:transparent;padding:2px 4px;border-radius:5px;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}.preview-value.null{font-style:italic;color:#8c9891}.insert-help{margin-top:9px;font-size:10px;line-height:1.5;color:var(--muted)}.attr-name-insert{border:0!important;background:transparent!important;margin:0!important;padding:2px 0!important;color:#31483d!important;font:inherit!important;font-weight:800!important;cursor:pointer;text-align:left;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}.attr-name-insert:hover{text-decoration:underline}.insert-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);opacity:0;pointer-events:none;z-index:100;background:#173d30;color:#fff;border-radius:999px;padding:9px 14px;font-size:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.18);transition:.16s}.insert-toast.show{opacity:1;transform:translate(-50%,0)}.relation-toggle{width:100%;margin-top:10px;border:1px solid var(--line);background:#f8faf8;color:#42564c;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer}.relation-lock{margin-top:10px}.schema-graph{margin-top:10px}.schema-graph svg{width:100%;height:auto;display:block;background:#fbfcfa;border:1px solid #e6ebe6;border-radius:10px;padding:4px}
-#cmwrap .CodeMirror{height:260px;font:13px/1.7 Consolas,monospace;direction:ltr;text-align:left;background:#10241c;color:#e8f0eb}
+#cmwrap .CodeMirror{font:13px/1.7 Consolas,monospace;direction:ltr;text-align:left;background:#10241c;color:#e8f0eb}
 #cmwrap .CodeMirror-gutters{background:#10241c;border-right:1px solid rgba(255,255,255,.1)}
 #cmwrap .CodeMirror-linenumber{color:#73877c}
 #cmwrap .cm-s-default .cm-keyword{color:#8fd8b8}
@@ -298,7 +298,7 @@ const FK_EDGES=[
 
 let db=null, dbError='', preview='depots';
 const APP_STATE_VERSION=6;
-const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},scratch:{},predAnswers:{},predChecked:{},sanityAnswers:{},sanityChecked:{},operationAnswers:{},operationChecked:{},operationHints:{},operationOpen:{},outputOpen:{},completed:[],skipped:[],hint:{},solution:{},solutionChoice:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{}});
+const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},scratch:{},predAnswers:{},predChecked:{},sanityAnswers:{},sanityChecked:{},operationAnswers:{},operationChecked:{},operationHints:{},operationOpen:{},outputOpen:{},completed:[],skipped:[],hint:{},solution:{},solutionChoice:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{},previewRows:{}});
 let state=load();
 function migrateState(x){
  const raw=x||{};
@@ -353,6 +353,7 @@ function migrateState(x){
  out.skipped=out.skipped||[];
  out.attempted=Array.isArray(out.attempted)?out.attempted:[];
  out.graphOpen=out.graphOpen||{};
+ out.previewRows=out.previewRows||{};
  out.theme=out.theme==='dark'?'dark':'light';
  out.version=APP_STATE_VERSION;
  return out;
@@ -426,7 +427,7 @@ function friendlySqlError(msg,sql,stage){
    const raw=noCol[1].replace(/[;,)]*$/,'');
    const col=raw.split('.').pop();
    const homes=columnTables(col);
-   let out="מה הטעות: SQLite לא מוצא את "+raw+" בתוך ה-relations שהשאילתה משתמשת בהם.";
+   let out="העמודה "+raw+" לא נמצאה ב־relations שבשאילתה.";
    if(homes.length)out+="\nאיפה הוא כן נמצא: "+homes.map(t=>t+"."+col).join(", ")+".";
    out+="\nבשאילתה שלך כרגע מופיעים: "+relText+".";
    const h=stageErrorHint(stage);
@@ -434,30 +435,37 @@ function friendlySqlError(msg,sql,stage){
    return out;
  }
  if(/near ";": syntax error/i.test(m)){
-   let out="מה הטעות: השאילתה נגמרת לפני שביטוי מסוים הושלם. SQLite נעצר ליד ;.";
+   let out="השאילתה לא הושלמה לפני סימן ה־;.";
    out+="\nבדקו אם נשאר פסיק, WHERE/ON/GROUP BY לא גמור, או expression שחסר לפני סוף השאילתה.";
    const h=stageErrorHint(stage); if(h)out+="\nרמז לשלב: "+h;
    return out;
  }
  if(/ambiguous column name:/i.test(m)){
    const col=(m.match(/ambiguous column name:\s*([^\s]+)/i)||[])[1]||"העמודה";
-   let out="מה הטעות: "+col+" קיים ביותר מ-relation אחד ולכן SQLite לא יודע לאיזה מהם התכוונתם.";
+   let out="העמודה "+col+" קיימת ביותר מ־relation אחד.";
    out+="\nרמז: הוסיפו alias לפני שם ה-attribute, למשל d.depot_id או r.depot_id.";
    return out;
  }
  if(/no such table:/i.test(m)){
    const tbl=(m.match(/no such table:\s*([^\s]+)/i)||[])[1]||"הטבלה";
-   let out="מה הטעות: SQLite לא מכיר relation בשם "+tbl+".";
+   let out="ה־relation "+tbl+" לא קיים במסד.";
    out+="\nבדקו את השם המדויק ב-Schema.";
    const h=stageErrorHint(stage); if(h)out+="\nרמז לשלב: "+h;
    return out;
  }
  if(/syntax error/i.test(m)){
-   let out="יש שגיאת תחביר ב-SQL. SQLite אומר: "+m;
+   let out="יש שגיאת תחביר ב־SQL.\nSQLite: "+m;
    const h=stageErrorHint(stage); if(h)out+="\nרמז לשלב: "+h;
    return out;
  }
  return m;
+}
+function sqlErrorHtml(error){
+ const lines=String(error||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ if(!lines.length)return'';
+ const summary=lines.shift();
+ const details=lines.length?'<details class="error-details"><summary>פרטים טכניים</summary><div>'+lines.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div></details>':'';
+ return '<div class="err" aria-live="polite"><b>'+esc(summary)+'</b>'+details+'</div>';
 }
 function fanoutApproach(sql){
  const q=String(sql||"");
@@ -583,10 +591,16 @@ function sqlLiteral(v){
 function previewDataHtml(table,canInsert){
  if(!db)return '<div class="schema-note">הנתונים יופיעו כשהמסד יסיים להיטען.</div>';
  try{
-   const rs=db.exec('SELECT * FROM '+table+' LIMIT 5');
-   if(!rs.length)return '<div class="schema-note">אין רשומות.</div>';
+   const totalRs=db.exec('SELECT COUNT(*) AS n FROM '+table);
+   const total=totalRs.length?Number(totalRs[0].values[0][0]):0;
+   const choice=(state.previewRows||{})[table]||5;
+   const limit=choice==='all'?null:Number(choice);
+   const rs=db.exec('SELECT * FROM '+table+(limit?' LIMIT '+limit:''));
+   if(!rs.length)return '<h4>Data preview · 0 rows</h4><div class="schema-note">אין רשומות.</div>';
    const r=rs[0];
-   return '<div class="tablewrap"><table><thead><tr>'+r.columns.map(col=>'<th>'+esc(col)+'</th>').join('')+'</tr></thead><tbody>'+
+   const shown=r.values.length;
+   const controls=total>5?'<div class="preview-controls"><span>מציג '+shown+' מתוך '+total+'</span><button data-preview-limit="5" '+(choice===5?'disabled':'')+'>5</button><button data-preview-limit="15" '+(choice===15?'disabled':'')+'>15</button><button data-preview-limit="all" '+(choice==='all'?'disabled':'')+'>הצג הכול</button></div>':'<div class="preview-controls"><span>'+total+' rows</span></div>';
+   return '<h4>Data preview</h4>'+controls+'<div class="tablewrap"><table><thead><tr>'+r.columns.map(col=>'<th>'+esc(col)+'</th>').join('')+'</tr></thead><tbody>'+
     r.values.map(row=>'<tr>'+row.map(v=>'<td>'+(canInsert?'<button class="preview-value '+(v===null?'null':'')+'" data-insert-token="'+esc(sqlLiteral(v))+'" title="הוסף value לעורך">'+(v===null?'NULL':esc(v))+'</button>':(v===null?'<em>NULL</em>':esc(v)))+'</td>').join('')+'</tr>').join('')+
     '</tbody></table></div>';
  }catch(e){
@@ -908,7 +922,7 @@ function relationalModelHtml(s){
 
 function scratchHtml(s){
  if(!s.scratch)return'';
- return '<details class="card scratch-details"><summary>✎ צריך לשרבט?</summary><div class="scratch-card-inner"><small>'+esc(s.scratch)+'</small><textarea id="scratch" placeholder="אזור עבודה חופשי — לא חלק מהבדיקה.">'+esc(state.scratch[state.stage]||'')+'</textarea></div></details>';
+ return '<details class="card scratch-details"><summary>✎ צריך לשרבט?</summary><div class="scratch-card-inner"><small>'+esc(s.scratch)+'</small><div class="scratch-meta">אזור עבודה אישי · לא נבדק · נשמר אוטומטית</div><textarea id="scratch" placeholder="שרטטו או כתבו כאן את החשיבה לפני ה-SQL.">'+esc(state.scratch[state.stage]||'')+'</textarea></div></details>';
 }
 
 function joinVizDisclosureHtml(s){
@@ -1015,13 +1029,13 @@ function render(){
  joinVizDisclosureHtml(s)+
  sanityHtml(s,false)+
  ((s.summary||s.intro)?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button></div></div></section>')+
- ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err" aria-live="polite">'+esc(lastError)+'</div>':resultHtml(lastResult))+(lastResult&&s.sanity?'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>':'')+'</section>':'')+
+ ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?sqlErrorHtml(lastError):resultHtml(lastResult))+(lastResult&&s.sanity?'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>':'')+'</section>':'')+
  (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')||queryFeedback.startsWith('התוצאה נכונה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
  (queryFeedback&&s.fanoutTrap?fanoutLessonHtml(state.sql[state.stage]||''):'')+
  ((s.intro||s.mapping||s.summary)?('<section class="card reason"><label>'+(s.intro?'מפת המונחים':s.mapping?'תשובה מובנית':'סיכום · מסגרת החלטה')+'</label><small>'+noteText+'</small>'+(s.intro?introHtml():s.mapping?structuredHtml():decisionHtml())+'<div class="actions">'+(s.intro?'<button class="check" id="checkIntro">הבנתי, אפשר להמשיך</button>':s.mapping?'<button class="check" id="check">בדוק תשובה</button>':'<button class="check" id="checkDecision">בדוק תשובות</button>')+(s.intro?'':'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button>')+'</div>'+(state.hint[state.stage]!==undefined&&!s.intro?'<div class="hintbox">'+hintText+'</div>':'')+(feedback?'<div class="feedback '+(feedback.startsWith('נכון')||feedback.startsWith('מצוין')||feedback.startsWith('מעולה')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+(state.solution[state.stage]&&!s.intro?'<div class="solutionbox"><b>פתרון מוצע</b><p>'+esc(s.solution)+'</p><p><b>עיקרון:</b> '+principleText+'</p></div>':'')+'</section>'):sqlSupportHtml(s,hintText,principleText))+
  '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא ←')+'</button></div>'+
  '</section>'+
- '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell">'+(canInsert?'<button class="attr-name-insert" data-insert-token="'+esc(a)+'" title="לחץ להוספה לעורך">'+esc(a)+'</button>':'<span>'+esc(a)+'</span>')+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview"><h4>Data preview · 5 rows</h4>'+previewDataHtml(preview,canInsert)+'</div></section>'+
+ '<aside class="side"><section class="card schema"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell">'+(canInsert?'<button class="attr-name-insert" data-insert-token="'+esc(a)+'" title="לחץ להוספה לעורך">'+esc(a)+'</button>':'<span>'+esc(a)+'</span>')+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview">'+previewDataHtml(preview,canInsert)+'</div></section>'+
  glossaryHtml()+
  '<section class="card principles"><h3>עקרונות שנלמדו</h3><ul>'+(STAGES.filter((x,i)=>done(i)).length?STAGES.filter((x,i)=>done(i)).map(x=>'<li>'+esc(x.principle)+'</li>').join(''):'<li style="color:#9aa79f">עוד לא הושלמו שלבים.</li>')+'</ul></section></aside>'+
  '</main>';
@@ -1043,7 +1057,7 @@ function mountEditor(){
      'Ctrl-Y':editor=>editor.redo(),'Cmd-Shift-Z':editor=>editor.redo(),
      'Ctrl-Space':editor=>showSqlHints(editor,true)
    }});
-   cm.setSize('100%',260);
+   cm.setSize('100%',state.stage>=11?420:320);
    cm.on('change',()=>{state.sql[state.stage]=cm.getValue();save();invalidateResult();});
    cm.on('cursorActivity',()=>{rememberEditorCursor();});
    cm.on('focus',()=>{rememberEditorCursor();});
@@ -1074,6 +1088,11 @@ function clearTransient(){lastResult=null;lastError='';feedback='';queryFeedback
 function bind(){
  document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{state.stage=+b.dataset.step;save();clearTransient();render();});
  document.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>{preview=b.dataset.table;render();});
+ document.querySelectorAll('[data-preview-limit]').forEach(b=>b.onclick=()=>{
+   const raw=b.dataset.previewLimit;
+   state.previewRows[preview]=raw==='all'?'all':Number(raw);
+   save();render();
+ });
  document.querySelectorAll('[data-insert-token]').forEach(b=>b.onmousedown=e=>{e.preventDefault();e.stopPropagation();insertIntoEditor(b.dataset.insertToken);});
  const note=document.getElementById('note');
  if(note)note.oninput=()=>{state.notes[state.stage]=note.value;save();};
