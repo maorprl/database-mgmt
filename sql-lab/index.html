@@ -121,10 +121,8 @@ route_shipments:{route_id:"INTEGER · PK/FK→routes",shipment_id:"INTEGER · PK
 const CASE_BRIEF="צוות Network Operations קיבל דיווח שסיכומי הביצוע אינם מתיישבים עם תוכניות המסלולים. הם צריכים להבין אילו routes נשארו עם חבילות מתוכננות שלא דווחו כמסופקות, האם מדובר ב-stop שטרם דווח או בפער אמיתי, ובאיזה depot כדאי להתחיל את הבדיקה.";
 
 const STAGES=[
-{title:"שפת הקורס",short:"שפת הקורס",eye:"פתיחה · המודל לפני התחביר",intro:true,context:"לפני שמתחילים לכתוב SQL, מיישרים קו על השפה שבה נתאר נתונים. המטרה היא להפריד בין המודל הרלציוני לבין האופן שבו SQL מציג תוצאות.",task:"עברו על מפת המונחים למטה. לא צריך לשנן; המילון הקבוע בצד יישאר זמין לאורך כל הקורס.",pred:"Database → Relation (טבלה) → Attribute (עמודה) / Tuple (שורה) / Value (ערך). Schema = המבנה; Instance = הנתונים ברגע נתון; Domain = הערכים המותרים; Grain = מה מייצגת שורה אחת.",starter:"",expected:null,note:"המונחים האלה הם שפת העבודה שלנו. אפשר לחזור למילון בכל שלב.",hints:["המילון בצד נשאר זמין לכל אורך המסלול."],solution:"Relation היא המקבילה התאורטית לטבלה במודל הרלציוני. Relation היא קבוצה של tuples: אין בה tuple כפול ואין משמעות לסדר. תוצאת SQL עשויה להכיל שורות כפולות, וסדר מופיע רק כשמגדירים אותו במפורש.",principle:"לפני תחביר SQL, מגדירים במדויק מה הנתונים מייצגים."},
-{title:"ממפים את רשת התפעול",short:"מיפוי database",mapping:true,eye:"שלב 1 בחקירה · להבין את הנתונים",context:"קיבלתם database של רשת משלוחים בלי מילון נתונים מוכן. לפני שמחשבים ביצועים, צריך לגלות מה מייצגת row אחת בכל relation ואיך הישויות קשורות.",task:"התחילו ב-depots, ואז חקרו גם drivers, vehicles, vehicle_trackers, routes, stops, shipments ו-route_shipments. המטרה היא להסיק מה מייצגת row אחת בכל relation ואיך הישויות קשורות, מתוך ה-keys והחזרות שאתם רואים.",pred:"אל תנחשו לפי שמות בלבד. חפשו Primary Key, Foreign Key, UNIQUE וערכים שחוזרים. Cardinality ואופציונליות הן שאלות נפרדות.",starter:"",expected:null,note:"בחרו Grain לכל relation ואת סוג הקשר באמצעות 1:1, ‏1:M או M:M בלבד.",hints:["איזה attribute מזהה tuple באופן ייחודי?","בדקו היכן depot_id ו-route_id חוזרים.","vehicle_trackers.vehicle_id הוא UNIQUE; בצד השני עדיין יכולה להיות אופציונליות."],solution:"depots: שורה לאתר תפעולי. vehicles: שורה לרכב. vehicle_trackers: שורה להתקן מעקב ולכל היותר אחת לרכב. routes: שורה למסלול. stops: שורה לעצירה. shipments: שורה למשלוח. route_shipments: שורה לשיוך בין מסלול למשלוח. depot→routes ו-route→stops הם 1:M; vehicle→tracker הוא 1:1; routes↔shipments הוא M:M דרך הגשר.",principle:"Grain = מה מייצגת שורה אחת."},
-{title:"קובעים מספרי בקרה",short:"Baseline",baseline:true,eye:"שלב 2 בחקירה · תמונת מקור",context:"Network Operations רוצים נקודת ייחוס לפני כל חיבור: היקף המסלולים המתוכנן מול היקף המשלוחים שנכנס למערכת.",task:"Network Operations רוצים נקודת ייחוס לפני כל חיבור: לדעת כמה routes קיימים ומה המרחק המתוכנן הכולל שלהם, ולצדם כמה shipments קיימים ומה המשקל המוצהר הכולל שלהם.",output:"route_count, planned_km, shipment_count, declared_weight · שורה אחת.",starter:"",expected:"SELECT (SELECT COUNT(*) FROM routes) route_count,(SELECT SUM(distance_km) FROM routes) planned_km,(SELECT COUNT(*) FROM shipments) shipment_count,(SELECT SUM(total_weight_kg) FROM shipments) declared_weight;",note:"מה כל אחד מארבעת המספרים מגן עליכם מלפספס בהמשך?",hints:["התחילו בשני מדדים מ-routes.","שני המדדים האחרים מגיעים מ-shipments.","אפשר להחזיר scalar subqueries באותה row."],solution:"SELECT (SELECT COUNT(*) FROM routes) AS route_count, (SELECT SUM(distance_km) FROM routes) AS planned_km, (SELECT COUNT(*) FROM shipments) AS shipment_count, (SELECT SUM(total_weight_kg) FROM shipments) AS declared_weight;",principle:"שומרים מספרי מקור פשוטים לפני חיבורים כדי לזהות ניפוח או אובדן rows."},
-{title:"איפה יצא כל מסלול?",short:"מסלולים לפי depot",eye:"חיבור מידע · חזרות תקינות",joinViz:"inner",context:"חדר הבקרה רוצה יומן מסלולים שמוסיף לכל route את האתר שממנו יצא.",task:"בנו רשימה של כל מסלול עם שם ה-depot, תאריך השירות, הסטטוס והמרחק.",output:"depot_name, route_code, service_date, status, distance_km · מיון לפי route_id.",pred:"קבעו מה כל row בתוצאה מייצגת לפני שאתם כותבים SQL.",predQuiz:[{q:"מה ה-output Grain?",opts:[["depot","depot"],["route","route"],["vehicle","vehicle"],["stop","stop"]],ans:"route",why:"כל row מייצגת route אחת, עם פרטי ה-depot שממנו יצאה."},{q:"האם depot_name יכול לחזור בלי שזו duplicate?",opts:[["yes","כן"],["no","לא"]],ans:"yes",why:"כן. מאותו depot יוצאים כמה routes; route_code מבדיל בין ה-tuples."},{q:"כמה rows צפויות בדאטה הנוכחי?",opts:[["8","8"],["11","11"],["13","13"],["21","21"]],ans:"13",why:"יש 13 routes, ולכל אחת יש depot אחד."}],starter:"",expected:"SELECT d.depot_name,r.route_code,r.service_date,r.status,r.distance_km FROM depots d INNER JOIN routes r ON r.depot_id=d.depot_id ORDER BY r.route_id;",note:"חזו את ה-Grain ואת מספר ה-rows.",hints:["איזה key ב-routes מצביע על depot?","השוו depot_id משני הצדדים.","הכלי שמחזיר matching rows נקרא INNER JOIN."],solution:"SELECT d.depot_name,r.route_code,r.service_date,r.status,r.distance_km FROM depots d INNER JOIN routes r ON r.depot_id=d.depot_id ORDER BY r.route_id;",principle:"בחיבור 1:M, ה-Grain עובר בדרך כלל לצד ה-M; חזרת ערך מה-parent אינה duplicate."},
+{title:"שפת הקורס",short:"שפת הקורס",eye:"פתיחה · המודל לפני התחביר",intro:true,context:"לפני שמתחילים לכתוב SQL, מיישרים קו על השפה שבה נתאר נתונים. המטרה היא להפריד בין המודל הרלציוני לבין האופן שבו SQL מציג תוצאות.",task:"עברו על מפת המונחים למטה. לא צריך לשנן; המילון הקבוע בצד יישאר זמין לאורך כל הקורס. לפני התרגיל הראשון, פתחו את מפת ה-Schema ומפו לעצמכם מה row אחת מייצגת ואיך ה-relations קשורות.",pred:"Database → Relation (טבלה) → Attribute (עמודה) / Tuple (שורה) / Value (ערך). Schema = המבנה; Instance = הנתונים ברגע נתון; Domain = הערכים המותרים; Grain = מה מייצגת שורה אחת.",starter:"",expected:null,note:"המונחים האלה הם שפת העבודה שלנו. אפשר לחזור למילון בכל שלב.",hints:["המילון בצד נשאר זמין לכל אורך המסלול."],solution:"Relation היא המקבילה התאורטית לטבלה במודל הרלציוני. Relation היא קבוצה של tuples: אין בה tuple כפול ואין משמעות לסדר. תוצאת SQL עשויה להכיל שורות כפולות, וסדר מופיע רק כשמגדירים אותו במפורש.",principle:"לפני תחביר SQL, מגדירים במדויק מה הנתונים מייצגים."},
+{title:"איפה יצא כל מסלול?",short:"מסלולים לפי depot",eye:"חיבור מידע · חזרות תקינות",joinViz:"inner",context:"חדר הבקרה רוצה יומן מסלולים שמוסיף לכל route את האתר שממנו יצא.",task:"בנו רשימה של כל מסלול עם שם ה-depot, תאריך השירות, הסטטוס והמרחק.",output:"depot_name, route_code, service_date, status, distance_km · מיון לפי route_id.",pred:"קבעו מה כל row בתוצאה מייצגת לפני שאתם כותבים SQL.",predQuiz:[{q:"מה ה-output Grain?",opts:[["depot","depot"],["route","route"],["vehicle","vehicle"],["stop","stop"]],ans:"route",why:"כל row מייצגת route אחת, עם פרטי ה-depot שממנו יצאה."}],starter:"",expected:"SELECT d.depot_name,r.route_code,r.service_date,r.status,r.distance_km FROM depots d INNER JOIN routes r ON r.depot_id=d.depot_id ORDER BY r.route_id;",note:"קבעו את ה-Grain לפני החיבור.",hints:["איזה key ב-routes מצביע על depot?","השוו depot_id משני הצדדים.","הכלי שמחזיר matching rows נקרא INNER JOIN."],solution:"SELECT d.depot_name,r.route_code,r.service_date,r.status,r.distance_km FROM depots d INNER JOIN routes r ON r.depot_id=d.depot_id ORDER BY r.route_id;",principle:"בחיבור 1:M, ה-Grain עובר בדרך כלל לצד ה-M; חזרת ערך מה-parent אינה duplicate."},
 {title:"מי שייך לכל אתר?",short:"נהגים לפי depot",eye:"חיבור מידע · parent שחוזר",joinViz:"inner",context:"מנהלת המשמרת מכינה directory תפעולי ורוצה לראות את הנהגים תחת האתר שבו הם משובצים.",task:"ה-directory צריך לאפשר למנהלת המשמרת לזהות כל driver, את האתר שאליו הוא משויך ואת סוג הרישיון המדווח שלו.",output:"depot_name, driver_name, license_class · מיון לפי driver_id.",pred:"קבעו את יחידת התוצאה.",predQuiz:[{q:"מה ה-output Grain?",opts:[["depot","depot"],["driver","driver"],["route","route"],["vehicle","vehicle"]],ans:"driver",why:"הבקשה דורשת row לכל driver."},{q:"מה צפוי עבור רישיון שלא דווח?",opts:[["zero","0"],["empty","מחרוזת ריקה"],["null","NULL"],["drop","ה-row תיעלם"]],ans:"null",why:"ה-attribute nullable, ולכן חוסר ערך מוצג כ-NULL בלי למחוק את ה-driver."}],starter:"",expected:"SELECT d.depot_name,dr.driver_name,dr.license_class FROM depots d INNER JOIN drivers dr ON dr.depot_id=d.depot_id ORDER BY dr.driver_id;",note:"חשבו מה row אחת מייצגת ומה משמעות NULL.",hints:["drivers.depot_id הוא ה-Foreign Key.","חברו אותו ל-depots.depot_id.","NULL הוא חוסר ערך, לא טקסט ולא אפס."],solution:"SELECT d.depot_name,dr.driver_name,dr.license_class FROM depots d INNER JOIN drivers dr ON dr.depot_id=d.depot_id ORDER BY dr.driver_id;",principle:"ביחס 1:M ערכי parent חוזרים לצד child rows שונות, ו-NULL נשאר חלק מה-row."},
 {title:"אילו אתרים באמת פעילים?",short:"נהג וגם מסלול",eye:"בחירת דרך · לשמור על היחידה",trapId:"early-fanout",fanoutTrap:true,scratch:"ציירו depot במרכז, drivers בענף אחד ו-routes בענף שני. סמנו את ה-cardinality וחשבו מה קורה כשיש 3 rows בכל ענף.",context:"מנהלת הרשת רוצה רשימת depots שיש בהם לפחות driver אחד ולפחות route אחת. היא אינה צריכה פרטי נהגים או מסלולים.",task:"המטרה היא shortlist של depots שיש בהם גם כוח אדם וגם פעילות מסלולים, בלי לחזור על אותו depot בגלל כמה drivers או routes.",output:"depot_name · מיון לפי depot_id.",pred:"מה ה-output Grain המבוקש?",predQuiz:[{q:"איזו יחידה צריכה להופיע פעם אחת?",opts:[["depot","depot"],["driver","driver"],["route","route"],["pair","driver × route"]],ans:"depot",why:"הדרישה היא רשימת depots, לא פירוט child rows."}],starter:"",expected:"SELECT d.depot_name FROM depots d WHERE EXISTS (SELECT 1 FROM drivers dr WHERE dr.depot_id=d.depot_id) AND EXISTS (SELECT 1 FROM routes r WHERE r.depot_id=d.depot_id) ORDER BY d.depot_id;",note:"המערכת תבדוק גם אם הדרך יצרה combinations מיותרים.",hints:["המשימה שואלת רק האם קיימת row בכל ענף.","חיבור שני ענפי 1:M עלול לייצר כל driver מול כל route.","EXISTS בודק קיום בלי לשנות את Grain ה-depot."],solution:"SELECT d.depot_name FROM depots d WHERE EXISTS (SELECT 1 FROM drivers dr WHERE dr.depot_id=d.depot_id) AND EXISTS (SELECT 1 FROM routes r WHERE r.depot_id=d.depot_id) ORDER BY d.depot_id;",principle:"כשצריך רק קיום, EXISTS שומר על Grain ה-parent ומונע fan-out מיותר."},
 {title:"באיזה רכב השתמש כל מסלול?",short:"מסלול ורכב",eye:"מעקב אחר key · relation מקור",joinViz:"inner",context:"צוות Fleet בודק התאמה בין תוכנית העבודה לצי הרכב.",task:"Fleet צריכים לראות עבור כל route איזה רכב הוקצה לו ומה מאפייני הרכב הרלוונטיים לתכנון קיבולת.",output:"route_code, plate_no, vehicle_type, capacity_kg · מיון לפי route_id.",pred:"זהו את ה-attribute שמוביל מהאירוע התפעולי לרכב המתאים.",predQuiz:[{q:"איזה attribute מחבר בין relations?",opts:[["depot_id","depot_id"],["route_id","route_id"],["vehicle_id","vehicle_id"],["plate_no","plate_no"]],ans:"vehicle_id",why:"routes.vehicle_id הוא Foreign Key אל vehicles.vehicle_id."}],starter:"",expected:"SELECT r.route_code,v.plate_no,v.vehicle_type,v.capacity_kg FROM routes r INNER JOIN vehicles v ON v.vehicle_id=r.vehicle_id ORDER BY r.route_id;",note:"חפשו Foreign Key ולא דמיון מקרי בערכים.",hints:["בדקו את routes.vehicle_id.","ה-key המופנה הוא vehicles.vehicle_id.","INNER JOIN מחזיר את ה-matches בפועל."],solution:"SELECT r.route_code,v.plate_no,v.vehicle_type,v.capacity_kg FROM routes r INNER JOIN vehicles v ON v.vehicle_id=r.vehicle_id ORDER BY r.route_id;",principle:"Foreign Key מתאר את מסלול החיבור; שמות עסקיים דומים אינם תחליף ל-key."},
@@ -215,20 +213,52 @@ const FK_EDGES=[
 ];
 
 let db=null, dbError='', preview='depots';
-const APP_STATE_VERSION=1;
+const APP_STATE_VERSION=2;
 const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},notes:{},scratch:{},predAnswers:{},predChecked:{},outputOpen:{},completed:[],skipped:[],hint:{},solution:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{}});
 let state=load();
 function migrateState(x){
  const raw=x||{};
  const out=Object.assign(defaults(),raw);
- out.structured=Object.assign({grain:{},card:{}},raw.structured||{});
+ function newIndex(i,forCurrent){
+   i=Number(i);
+   if(!Number.isInteger(i))return null;
+   if(i===0)return 0;
+   if(i===1||i===2)return forCurrent?1:null;
+   return i>=3?i-2:null;
+ }
+ function remapList(list){
+   const seen=new Set();
+   (Array.isArray(list)?list:[]).forEach(i=>{const n=newIndex(i,false);if(n!==null)seen.add(n);});
+   return [...seen];
+ }
+ function remapMap(obj){
+   const next={};
+   Object.keys(obj||{}).forEach(k=>{const n=newIndex(+k,false);if(n!==null)next[n]=obj[k];});
+   return next;
+ }
+ if((raw.version||0)<2){
+   out.stage=newIndex(raw.stage||0,true);
+   out.sql=remapMap(raw.sql);
+   out.notes=remapMap(raw.notes);
+   out.scratch=remapMap(raw.scratch);
+   out.predAnswers=remapMap(raw.predAnswers);
+   out.predChecked=remapMap(raw.predChecked);
+   out.outputOpen=remapMap(raw.outputOpen);
+   out.hint=remapMap(raw.hint);
+   out.solution=remapMap(raw.solution);
+   out.graphOpen=remapMap(raw.graphOpen);
+   out.completed=remapList(raw.completed);
+   out.skipped=remapList(raw.skipped);
+   out.attempted=remapList(raw.attempted);
+ }
+ out.structured=Object.assign({grain:{},card:{}},raw.structured||out.structured||{});
  out.structured.grain=out.structured.grain||{};
  out.structured.card=out.structured.card||{};
- out.decision=raw.decision||{};
- out.scratch=raw.scratch||{};
- out.predAnswers=raw.predAnswers||{};
- out.predChecked=raw.predChecked||{};
- out.outputOpen=raw.outputOpen||{};
+ out.decision=raw.decision||out.decision||{};
+ out.scratch=out.scratch||{};
+ out.predAnswers=out.predAnswers||{};
+ out.predChecked=out.predChecked||{};
+ out.outputOpen=out.outputOpen||{};
  out.skipped=out.skipped||[];
  out.attempted=Array.isArray(out.attempted)?out.attempted:[];
  out.graphOpen=out.graphOpen||{};
@@ -308,13 +338,8 @@ function friendlySqlError(msg,sql,stage){
    let out="מה הטעות: SQLite לא מוצא את "+raw+" בתוך ה-relations שהשאילתה משתמשת בהם.";
    if(homes.length)out+="\nאיפה הוא כן נמצא: "+homes.map(t=>t+"."+col).join(", ")+".";
    out+="\nבשאילתה שלך כרגע מופיעים: "+relText+".";
-   if(STAGES[stage]&&STAGES[stage].baseline){
-     out+="\nמה זה אומר כאן: מדדי ה-baseline מגיעים מ-routes ומ-shipments; relation אחת לבדה אינה מכילה את כל ארבעת המדדים.";
-     out+="\nרמז: כל מדד יכול להגיע מה-relation המתאים שלו באמצעות scalar subquery, בלי לחבר ביניהם.";
-   }else{
-     const h=stageErrorHint(stage);
-     if(h)out+="\nרמז לשלב: "+h;
-   }
+   const h=stageErrorHint(stage);
+   if(h)out+="\nרמז לשלב: "+h;
    return out;
  }
  if(/near ";": syntax error/i.test(m)){
@@ -765,7 +790,7 @@ function render(){
  '<main class="layout">'+
  '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+'" data-step="'+i+'"><span class="n">'+(done(i)?'✓':i+1)+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
- ((state.stage===1||state.stage===2)?'<section class="card case-brief"><b>CASE BRIEF · NETWORK OPERATIONS</b><p>'+esc(CASE_BRIEF)+'</p></section>':'')+
+ ((state.stage===1)?'<section class="card case-brief"><b>CASE BRIEF · NETWORK OPERATIONS</b><p>'+esc(CASE_BRIEF)+'</p></section>':'')+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+(state.stage+1)+'. '+esc(s.title)+'</h2><div class="context">'+contextText+'</div><div class="task"><b>'+(s.output?'הבקשה העסקית':'המשימה')+'</b><br>'+taskText+'</div>'+(s.output?('<div class="output-toggle"><button id="toggleOutput">'+(state.outputOpen[state.stage]?'הסתר דרישות פלט':'הצג דרישות פלט')+'</button></div>'+(state.outputOpen[state.stage]?'<div class="output-req"><b>דרישות פלט</b><span>'+esc(s.output)+'</span></div>':'')):'')+predictionHtml(s,predText,noteText,needNote,noteVal)+'</article>'+ ((s.joinViz&&(done(state.stage)||state.solution[state.stage]||state.hint[state.stage]!==undefined))?joinVizHtml(s.joinViz):'')+
  (s.scratch?'<section class="card scratch-card"><div class="scratch-head"><div><b>✎ שרבוט לפני SQL</b><small>'+esc(s.scratch)+'</small></div></div><textarea id="scratch" placeholder="אפשר לכתוב/לשרבט כאן בטקסט. זה לא חלק מהבדיקה.">'+esc(state.scratch[state.stage]||'')+'</textarea></section>':'')+
  ((s.summary||s.intro)?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="אם מסומן SQL, יורץ רק הטקסט המסומן">▶ Run Query</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button></div></div></section>')+
