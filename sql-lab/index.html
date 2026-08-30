@@ -777,8 +777,13 @@ function predictionHtml(s,predText,noteText,needNote,noteVal){
 }
 
 function sanityHtml(s,after){
- if(!s.sanity)return'';
- const txt=after?s.sanity.after:s.sanity.before;
+ if(s.intro||s.summary)return'';
+ const fallback={
+   before:"לפני שאתם כותבים SQL, קבעו מה row אחת אמורה לייצג. לפי ה-cardinality, האם אתם מצפים שהחיבור ישמור על מספר ה-rows, יגדיל אותו או עלול להשאיר rows ללא match?",
+   after:"השוו את התוצאה לציפייה שלכם: האם ה-Grain נשמר? האם מספר ה-rows הגיוני ביחס ל-cardinality? חפשו חזרות, NULL או rows חסרות שלא ציפיתם להם."
+ };
+ const spec=s.sanity||fallback;
+ const txt=after?spec.after:spec.before;
  if(!txt)return'';
  return '<section class="card sanity-card '+(after?'after':'')+'" aria-label="Sanity Check"><div class="sanity-title">'+(after?'✓ SANITY CHECK · אחרי ההרצה':'⚠ SANITY CHECK · לפני SQL')+'</div><p><b>'+(after?'בדיקת מציאות: ':'עצירה לבדיקה: ')+'</b>'+esc(txt)+'</p></section>';
 }
@@ -810,7 +815,7 @@ function render(){
  (s.scratch?'<section class="card scratch-card"><div class="scratch-head"><div><b>✎ שרבוט לפני SQL</b><small>'+esc(s.scratch)+'</small></div></div><textarea id="scratch" placeholder="אפשר לכתוב/לשרבט כאן בטקסט. זה לא חלק מהבדיקה.">'+esc(state.scratch[state.stage]||'')+'</textarea></section>':'')+
  ((s.summary||s.intro)?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="אם מסומן SQL, יורץ רק הטקסט המסומן">▶ Run Query</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+'>✓ בדוק שאילתה</button></div></div></section>')+
  ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?'<div class="err" aria-live="polite">'+esc(lastError)+'</div>':resultHtml(lastResult))+'</section>':'')+
- ((lastResult&&s.sanity)?sanityHtml(s,true):'')+
+ ((lastResult&&!s.intro&&!s.summary)?sanityHtml(s,true):'')+
  (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')||queryFeedback.startsWith('התוצאה נכונה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
  (queryFeedback&&s.fanoutTrap?fanoutLessonHtml(state.sql[state.stage]||''):'')+
  '<section class="card reason"><label>'+(s.intro?'מפת המונחים':s.mapping?'תשובה מובנית':s.summary?'סיכום · מסגרת החלטה':s.pred?'בדיקה ומשוב':'הסבר')+((needNote&&!s.pred)?' · חובה לפני הבדיקה':'')+'</label><small>'+(s.pred&&!s.intro&&!s.mapping?'התחזית שלכם נשמרה למעלה. כאן אפשר לקבל רמז, לבדוק פתרון ולבחון את התוצאה.':noteText)+'</small>'+
