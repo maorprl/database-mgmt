@@ -869,6 +869,7 @@ function sqlCompletionHint(editor){
  return {list:items,from:from,to:to};
 }
 function showSqlHints(editor,force){
+ if(curr().foreignSchema)return;
  if(!window.CodeMirror||!CodeMirror.showHint)return;
  if(!force){
    const cur=editor.getCursor(),line=editor.getLine(cur.line).slice(0,cur.ch);
@@ -1171,7 +1172,7 @@ function render(){
  '<main class="layout">'+
  '<aside class="steps card"><h3>מסלול החקירה</h3><nav>'+STAGES.map((x,i)=>'<button class="step '+(i===state.stage?'active ':'')+'" data-step="'+i+'"><span class="n">'+(done(i)?'✓':esc(stageBadge(i)))+'</span><span><b>'+esc(x.short)+'</b><small>'+esc(x.title)+'</small></span></button>').join('')+'</nav></aside>'+
  '<section class="main">'+
- ((state.stage===1)?'<section class="card case-brief"><b>CASE BRIEF · NETWORK OPERATIONS</b><p>'+esc(CASE_BRIEF)+'</p></section>':'')+
+ ((stageBadge(state.stage)==='1')?'<section class="card case-brief"><b>CASE BRIEF · NETWORK OPERATIONS</b><p>'+esc(CASE_BRIEF)+'</p></section>':'')+
  '<article class="card hero"><div class="eyebrow">'+esc(s.eye)+'</div><h2>'+esc(stageHeading(state.stage))+' · '+esc(s.title)+'</h2><div class="context">'+contextText+'</div><div class="task"><b>'+(s.output?'הבקשה העסקית':'המשימה')+'</b><br>'+taskText+'</div>'+(s.output?('<div class="output-toggle"><button id="toggleOutput">'+(state.outputOpen[state.stage]?'הסתר דרישות פלט':'הצג דרישות פלט')+'</button></div>'+(state.outputOpen[state.stage]?'<div class="output-req"><b>דרישות פלט</b><span>'+esc(s.output)+'</span></div>':'')):'')+'</article>'+
  foreignSchemaHtml(s)+
  warmupHtml(s)+
