@@ -33,7 +33,7 @@ section{scroll-margin-top:95px}.section{margin-top:24px}.section h2{font-size:17
   <b>דף עזר, לא שלב לימוד.</b>
   <p>חפשו כאן פונקציה או דפוס כשאתם צריכים להזכיר לעצמכם תחביר. הדוגמאות משתמשות בנתונים של RouteCraft.</p>
   <div class="toc">
-    <a href="#core">Core</a><a href="#text">טקסט</a><a href="#date">תאריך</a><a href="#aggregate">Aggregates</a><a href="#logic">טווח ולוגיקה</a><a href="#subqueries">Subqueries</a><a href="#window">Window Functions</a>
+    <a href="#core">Core</a><a href="#joins">JOIN patterns</a><a href="#setops">UNION</a><a href="#text">טקסט</a><a href="#date">תאריך</a><a href="#aggregate">Aggregates</a><a href="#logic">טווח ולוגיקה</a><a href="#subqueries">Subqueries</a><a href="#window">Window Functions</a>
   </div>
 </section>
 
@@ -62,6 +62,46 @@ FROM stops;</pre><div class="result">NULL ב-delivered_packages מוצג כ-0.</
                 THEN 1 ELSE 0 END) AS completed_routes
 FROM routes
 GROUP BY service_date;</pre></article>
+</div>
+</section>
+
+<section class="section" id="joins">
+<h2>JOIN patterns</h2>
+<div class="grid">
+  <article class="item full"><h3>Self Join</h3><p>אותה relation משתתפת פעמיים בשאילתה עם aliases שונים. אין keyword בשם SELF JOIN; משתמשים ב-JOIN רגיל.</p><div class="syntax">FROM table a LEFT JOIN table b ON ...</div><div class="example-label">דוגמה: driver והממונה שלה</div><pre>SELECT dr.driver_name,
+       sup.driver_name AS supervisor_name
+FROM drivers dr
+LEFT JOIN drivers sup
+  ON sup.driver_id = dr.supervisor_id
+ORDER BY dr.driver_id;</pre><div class="result">אותה relation מופיעה פעם כ-dr ופעם כ-sup. ה-Grain נשאר driver.</div></article>
+</div>
+</section>
+
+<section class="section" id="setops">
+<h2>Set operations · UNION / UNION ALL</h2>
+<div class="grid">
+  <article class="item"><h3>UNION</h3><p>מחבר results אנכית ומסיר duplicate rows.</p><div class="syntax">SELECT ... UNION SELECT ...</div><div class="example-label">דוגמה</div><pre>SELECT route_code
+FROM routes
+WHERE status = 'delayed'
+
+UNION
+
+SELECT route_code
+FROM routes
+WHERE distance_km &gt;= 100
+ORDER BY route_code;</pre><div class="result">Route שעומדת בשני התנאים תופיע פעם אחת.</div></article>
+
+  <article class="item"><h3>UNION ALL</h3><p>מחבר results אנכית ושומר את כל ה-rows, כולל duplicates.</p><div class="syntax">SELECT ... UNION ALL SELECT ...</div><div class="example-label">דוגמה</div><pre>SELECT route_code
+FROM routes
+WHERE status = 'delayed'
+
+UNION ALL
+
+SELECT route_code
+FROM routes
+WHERE distance_km &gt;= 100;</pre><div class="result">אם route נמצאת בשתי הרשימות, היא תופיע פעמיים.</div></article>
+
+  <article class="item full"><p><b>כלל מבני:</b> לכל SELECT ב-set operation צריך להיות אותו מספר columns, בסדר תואם וב-types תואמים מספיק. UNION מסיר duplicates לפי כל ה-columns ב-row, לא לפי column אחת שבחרתם בראש.</p></article>
 </div>
 </section>
 
