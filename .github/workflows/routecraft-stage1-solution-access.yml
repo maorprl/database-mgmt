@@ -1,0 +1,49 @@
+name: RouteCraft Stage 1 solution access validation
+on:
+  push:
+    branches: [routecraft-stage1-solution-access]
+    paths: [.github/workflows/routecraft-stage1-solution-access.yml]
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: routecraft-stage1-solution-access
+      - name: Patch Stage 1 solution access
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sql-lab/index.html')
+          s=p.read_text()
+          old="const allowFullSolution=state.stage!==1||(state.attempted||[]).includes(1);"
+          new="const allowFullSolution=state.stage!==1||operationChoiceResolved(s);"
+          if old not in s:
+              raise SystemExit('solution gate marker not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Validate JavaScript and guardrails
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('sql-lab/index.html').read_text()
+          a=s.index('<script>', s.index('sql.js'))+len('<script>')
+          b=s.rindex('</script>')
+          Path('/tmp/routecraft.js').write_text(s[a:b])
+          assert "const allowFullSolution=state.stage!==1||operationChoiceResolved(s);" in s
+          assert "altSolutions:[{\"label\":\"Correlated subquery\"" in s
+          assert "Output Grain = route" in s
+          assert "Cardinality: route → depot = 1" in s
+          PY
+          node --check /tmp/routecraft.js
+          git diff --check
+      - name: Commit patch
+        run: |
+          git config user.name "maorprl"
+          git config user.email "maorperlov@gmail.com"
+          git add sql-lab/index.html
+          git commit -m "Expose Stage 1 solutions at solution step" || exit 0
+          git push origin HEAD:routecraft-stage1-solution-access
