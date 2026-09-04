@@ -1,0 +1,67 @@
+from pathlib import Path
+import re
+
+p = Path('sql-lab/index.html')
+s = p.read_text(encoding='utf-8')
+marker = 'EARLY_FLOW_GATE_V11'
+
+if marker not in s:
+    old = """function operationChoiceResolved(s){
+ if(!s.operation)return false;
+ if(s.operation.mode==='teach')return !!state.operationChecked[state.stage];
+ return !!(state.operationChecked[state.stage]&&state.operationAnswers[state.stage]===s.operation.ans);
+}
+"""
+    new = old + """
+// EARLY_FLOW_GATE_V11
+function earlyStageFlow(){return state.stage>=1&&state.stage<=7;}
+function earlyPredictionResolved(s){
+ if(!earlyStageFlow()||!s.predQuiz)return true;
+ const a=(state.predAnswers||{})[String(state.stage)]||{};
+ return s.predQuiz.every((q,qi)=>predQuestionChecked(state.stage,qi)&&a[String(qi)]===q.ans);
+}
+function earlySanityResolved(s){
+ if(!earlyStageFlow())return true;
+ return !!(s.sanity&&state.sanityChecked[state.stage]&&state.sanityAnswers[state.stage]===s.sanity.ans);
+}
+"""
+    if s.count(old) != 1:
+        raise SystemExit('operationChoiceResolved marker mismatch')
+    s = s.replace(old, new, 1)
+
+    old = """ return '<details class=\"card operation-card operation-help\" id=\"operationHelp\" '+(open?'open':'')+'><summary>לא בטוח איזו פעולה מתאימה?</summary><div class=\"operation-help-inner\">'+body+'</div></details>';
+}"""
+    new = """ if(earlyStageFlow())return '<section class=\"card operation-card\"><div class=\"operation-title\">תפקיד ה-relation לפני SQL</div>'+body+'</section>';
+ return '<details class=\"card operation-card operation-help\" id=\"operationHelp\" '+(open?'open':'')+'><summary>לא בטוח איזו פעולה מתאימה?</summary><div class=\"operation-help-inner\">'+body+'</div></details>';
+}"""
+    if s.count(old) != 1:
+        raise SystemExit('operationHtml return marker mismatch')
+    s = s.replace(old, new, 1)
+
+    old = """ scratchHtml(s)+
+ operationHtml(s)+
+ joinVizDisclosureHtml(s)+
+ sanityHtml(s,false)+
+ scaffoldHtml(s)+
+ scaffoldGateHtml(s)+
+ ((s.summary||s.intro||!scaffoldComplete(s))?'':'<section class=\"editor\">"""
+    new = """ scratchHtml(s)+
+ (earlyPredictionResolved(s)?operationHtml(s):'')+
+ joinVizDisclosureHtml(s)+
+ ((!earlyStageFlow()||operationChoiceResolved(s))?sanityHtml(s,false):'')+
+ ((earlyStageFlow()&&operationChoiceResolved(s)&&!earlySanityResolved(s))?'<section class=\"card scaffold-gate\"><b>לפני SQL: השלימו את ה-Sanity Check.</b><span>קבעו קודם מה אמור לקרות ל-rows, ורק אחר כך עברו לעורך.</span></section>':'')+
+ scaffoldHtml(s)+
+ scaffoldGateHtml(s)+
+ ((s.summary||s.intro||!scaffoldComplete(s)||!earlyPredictionResolved(s)||(earlyStageFlow()&&(!operationChoiceResolved(s)||!earlySanityResolved(s))))?'':'<section class=\"editor\">"""
+    if s.count(old) != 1:
+        raise SystemExit('render flow marker mismatch')
+    s = s.replace(old, new, 1)
+    p.write_text(s, encoding='utf-8')
+
+s = p.read_text(encoding='utf-8')
+assert marker in s
+assert 'תפקיד ה-relation לפני SQL' in s
+assert 'לפני SQL: השלימו את ה-Sanity Check' in s
+scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', s, re.S)
+Path('/tmp/routecraft.js').write_text('\n'.join(scripts), encoding='utf-8')
+print('flow markers ok')
