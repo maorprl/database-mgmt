@@ -1223,8 +1223,10 @@ function stage1GuidedFlowHtml(s){
  if(state.stage!==1)return '';
  if(!stage1ReasoningResolved(s))return '';
  let out=stage1ExplorationHtml(s);
- if((state.exploreRan||{})[1])out+=sanityHtml(s,false);
- if((state.exploreRan||{})[1]&&stage1SanityResolved(s))out+=operationHtml(s)+joinVizDisclosureHtml(s);
+ if((state.exploreRan||{})[1]){
+   out+=sanityHtml(s,false);
+   out+=operationHtml(s)+joinVizDisclosureHtml(s);
+ }
  return out;
 }
 function runStage1Explore(){
