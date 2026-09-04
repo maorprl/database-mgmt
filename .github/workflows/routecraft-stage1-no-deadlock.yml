@@ -1,0 +1,60 @@
+name: RouteCraft Stage 1 no deadlock validation
+on:
+  push:
+    branches: [routecraft-stage1-concept-closures]
+    paths: [.github/workflows/routecraft-stage1-no-deadlock.yml]
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: routecraft-stage1-concept-closures
+      - name: Patch Stage 1 progression
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sql-lab/index.html')
+          s=p.read_text()
+          old=""" if((state.exploreRan||{})[1])out+=sanityHtml(s,false);\n if((state.exploreRan||{})[1]&&stage1SanityResolved(s))out+=operationHtml(s)+joinVizDisclosureHtml(s);"""
+          new=""" if((state.exploreRan||{})[1]){\n   out+=sanityHtml(s,false);\n   out+=operationHtml(s)+joinVizDisclosureHtml(s);\n }"""
+          if old not in s:
+              raise SystemExit('stage1 guided flow marker not found')
+          s=s.replace(old,new,1)
+          old2="""(state.stage===1&&!operationChoiceResolved(s)))?'':'<section class=\"editor\""""
+          if old2 not in s:
+              raise SystemExit('editor gate marker not found')
+          # Keep editor gate exactly as-is. We only remove the misleading SQL-support controls before the operation is resolved.
+          old3="""'):sqlSupportHtml(s,hintText,principleText))+\n '<div class=\"nav\">'"""
+          new3="""'):(state.stage===1&&!operationChoiceResolved(s)?'':sqlSupportHtml(s,hintText,principleText)))+\n '<div class=\"nav\">'"""
+          if old3 not in s:
+              raise SystemExit('sql support marker not found')
+          s=s.replace(old3,new3,1)
+          p.write_text(s)
+          PY
+      - name: Validate JavaScript and Stage 1 guardrails
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('sql-lab/index.html').read_text()
+          a=s.index('<script>', s.index('sql.js'))+len('<script>')
+          b=s.rindex('</script>')
+          Path('/tmp/routecraft.js').write_text(s[a:b])
+          assert "out+=sanityHtml(s,false);\n   out+=operationHtml(s)+joinVizDisclosureHtml(s);" in s
+          assert "state.stage===1&&!operationChoiceResolved(s)?'':sqlSupportHtml" in s
+          assert 'Output Grain = route' in s
+          assert 'Cardinality: route → depot = 1' in s
+          assert 'Role של depots = הוספת attribute' in s
+          assert 'Effect: ה-Grain נשאר route' in s
+          PY
+          node --check /tmp/routecraft.js
+          git diff --check
+      - name: Commit patch
+        run: |
+          git config user.name "maorprl"
+          git config user.email "maorperlov@gmail.com"
+          git add sql-lab/index.html
+          git commit -m "Keep Stage 1 progression visible" || exit 0
+          git push origin HEAD:routecraft-stage1-concept-closures
