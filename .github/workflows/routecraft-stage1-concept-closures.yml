@@ -1,0 +1,91 @@
+name: RouteCraft Stage 1 concept closure validation
+
+on:
+  push:
+    branches: [routecraft-stage1-concept-closures]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Stage 1 concept closures only
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('sql-lab/index.html')
+          s=p.read_text(encoding='utf-8')
+
+          replacements=[
+            ('ans:"route",why:"הבקשה היא רשימה של מסלולים. לכן כל row בתוצאה צריכה לייצג route אחת."}',
+             'ans:"route",why:"הבקשה היא רשימה של מסלולים. לכן כל row בתוצאה צריכה לייצג route אחת.",concept:"Output Grain = route"}'),
+            ('ans:"depot_name",why:"route_code, service_date, status ו-distance_km כבר נמצאים ב-routes. depot_name נמצא ב-depots. לכן אנחנו צריכים את depots כדי להשלים את המידע שחסר בפלט."}',
+             'ans:"depot_name",why:"route_code, service_date, status ו-distance_km כבר נמצאים ב-routes. depot_name נמצא ב-depots. לכן אנחנו צריכים את depots כדי להשלים את המידע שחסר בפלט.",concept:"Role של depots = הוספת attribute לפלט: depot_name"}'),
+            ('ans:"one",why:"routes.depot_id הוא Foreign Key וגם NOT NULL. הוא מצביע על depots.depot_id, שהוא Primary Key. ה-PK מזהה row אחת בלבד, וה-NOT NULL אומר של-route חייב להיות depot_id. לכן לכל route יש match אחד ב-depots."}',
+             'ans:"one",why:"routes.depot_id הוא Foreign Key וגם NOT NULL. הוא מצביע על depots.depot_id, שהוא Primary Key. ה-PK מזהה row אחת בלבד, וה-NOT NULL אומר של-route חייב להיות depot_id. לכן לכל route יש match אחד ב-depots.",concept:"Cardinality: route → depot = 1 · depot → routes = 0..many (1:M)"}'),
+            ('ans:"same",why:"לכל route מצטרפת row אחת בלבד של depot. לכן route לא מתפצלת לכמה rows, וה-Grain נשאר route."}',
+             'ans:"same",why:"לכל route מצטרפת row אחת בלבד של depot. לכן route לא מתפצלת לכמה rows, וה-Grain נשאר route.",concept:"Effect: ה-Grain נשאר route · מספר ה-rows נשמר · אין fanout"}')
+          ]
+          for old,new in replacements:
+              if old not in s:
+                  raise SystemExit('Stage 1 question marker not found: '+old[:40])
+              s=s.replace(old,new,1)
+
+          old="const exp=(checked&&cur)?('<div class=\"answer-exp '+(cur===q.ans?'good':'wrong')+'\"><b>'+(cur===q.ans?'נכון. ':'עוד לא. ')+'</b>'+esc(q.why)+'</div>'):'';"
+          new="const concept=(checked&&cur===q.ans&&q.concept)?'<div class=\"stage1-concept-close\"><b>שם למסקנה:</b> '+esc(q.concept)+'</div>':'';\n     const exp=(checked&&cur)?('<div class=\"answer-exp '+(cur===q.ans?'good':'wrong')+'\"><b>'+(cur===q.ans?'נכון. ':'עוד לא. ')+'</b>'+esc(q.why)+concept+'</div>'):'';"
+          # Replace only the first occurrence after the Stage 1 renderQ declaration.
+          anchor="if(state.stage===1){\n   const renderQ=(qi)=>{"
+          pos=s.find(anchor)
+          if pos<0: raise SystemExit('Stage 1 renderQ anchor not found')
+          target=s.find(old,pos)
+          if target<0: raise SystemExit('Stage 1 feedback renderer marker not found')
+          s=s[:target]+new+s[target+len(old):]
+
+          css_anchor='.answer-exp b{font-weight:900}\n'
+          css_add='.answer-exp b{font-weight:900}\n.stage1-concept-close{margin-top:8px;padding-top:8px;border-top:1px solid rgba(40,94,67,.18);font-weight:900;color:#285e43;line-height:1.55;unicode-bidi:plaintext}\n:root[data-theme="dark"] .stage1-concept-close{color:#bfe2ca;border-top-color:rgba(191,226,202,.22)}\n'
+          if css_anchor not in s: raise SystemExit('CSS anchor not found')
+          s=s.replace(css_anchor,css_add,1)
+
+          p.write_text(s,encoding='utf-8')
+
+      - name: Validate JavaScript and Stage 1 guardrails
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          for text in [
+              'concept:"Output Grain = route"',
+              'concept:"Role של depots = הוספת attribute לפלט: depot_name"',
+              'concept:"Cardinality: route → depot = 1 · depot → routes = 0..many (1:M)"',
+              'concept:"Effect: ה-Grain נשאר route · מספר ה-rows נשמר · אין fanout"',
+              'class="stage1-concept-close"',
+              'SQL לחקירה · baseline',
+              's.output&&state.stage!==1'
+          ]:
+              assert text in s, text
+          assert 'Baseline: ב־`routes` יש 13 rows' not in s[s.find('{title:"איפה יצא כל מסלול?"'):s.find('{title:"מי שייך לכל אתר?"')]
+          m=re.search(r'<script>\s*(const STORAGE_KEY[\s\S]*?)</script>',s)
+          if not m: raise SystemExit('inline app script block not found')
+          Path('/tmp/app.js').write_text(m.group(1),encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+          git diff --check
+          git diff -- sql-lab/index.html
+
+      - name: Commit patch if needed
+        shell: bash
+        run: |
+          if git diff --quiet -- sql-lab/index.html; then
+            echo 'No patch needed'
+            exit 0
+          fi
+          git config user.name 'maorprl'
+          git config user.email 'maorperlov@gmail.com'
+          git add sql-lab/index.html
+          git commit -m 'Restore Stage 1 concept closures'
+          git push
