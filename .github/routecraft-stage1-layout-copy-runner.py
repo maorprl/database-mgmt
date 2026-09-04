@@ -4,7 +4,7 @@ patcher=Path('.github/routecraft-stage1-layout-copy.py')
 src=patcher.read_text(encoding='utf-8')
 start=src.index('# 5) Explain the relational-algebra symbols before using the expression.')
 end=src.index('# Guardrails for the agreed scope.')
-replacement=r'''# 5) Explain the relational-algebra symbols before using the expression.
+replacement=r"""# 5) Explain the relational-algebra symbols before using the expression.
 pattern=r"function stage1JoinPredicateHtml\(\)\{\n return '<section class=\"card stage1-algebra-card\">.*?</section>';\n\}"
 matches=re.findall(pattern,s,flags=re.S)
 if len(matches)!=1:
@@ -14,6 +14,6 @@ new_algebra='''function stage1JoinPredicateHtml(){
 }'''
 s=re.sub(pattern,lambda _m:new_algebra,s,count=1,flags=re.S)
 
-'''
+"""
 modified=src[:start]+replacement+src[end:]
 exec(compile(modified,str(patcher), 'exec'),{'__name__':'__main__'})
