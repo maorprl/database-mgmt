@@ -1,0 +1,57 @@
+name: RouteCraft Stage 1 pedagogy polish
+
+on:
+  push:
+    branches:
+      - routecraft-stage1-pedagogy-polish
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply narrow Stage 1 patch
+        run: python .github/routecraft-stage1-pedagogy-polish.py
+      - name: Validate diff and JavaScript
+        run: |
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "sql-lab/index.html"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script[^>]*>([\s\S]*?)</script>',s)
+          inline=[x for x in scripts if x.strip()]
+          if not inline:
+              raise SystemExit('no inline script found')
+          Path('/tmp/routecraft-app.js').write_text(inline[-1],encoding='utf-8')
+          checks=[
+              'function stage1JoinPredicateHtml()',
+              'stage1BaselineSanityHtml(s)+operationHtml(s)',
+              'אתגר מתקדם · בלי JOIN',
+              'function stage1PredictionWrongFeedback(qi,choice)',
+              'function stage1OperationWrongFeedback(choice)',
+              'מי שייך לכל אתר?'
+          ]
+          for token in checks:
+              if token not in s:
+                  raise SystemExit('missing: '+token)
+          PY
+          node --check /tmp/routecraft-app.js
+      - name: Commit validated app change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sql-lab/index.html
+          git commit -m "Polish Stage 1 reasoning flow"
+          git push origin HEAD:routecraft-stage1-pedagogy-polish
