@@ -1,0 +1,66 @@
+name: RouteCraft Stage 1 cardinality copy
+
+on:
+  push:
+    branches:
+      - routecraft-stage1-cardinality-copy
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply narrow Stage 1 copy patch
+        run: python .github/routecraft-stage1-cardinality-copy.py
+      - name: Validate diff and JavaScript
+        run: |
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "sql-lab/index.html"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script[^>]*>([\s\S]*?)</script>',s)
+          inline=[x for x in scripts if x.strip()]
+          if not inline:
+              raise SystemExit('no inline script found')
+          Path('/tmp/routecraft-app.js').write_text(inline[-1],encoding='utf-8')
+          required=[
+              'Cardinality: הקשר depots → routes הוא 1:M — אחד לרבים.',
+              'אם לכל route מתאים depot אחד בדיוק, מה יקרה אחרי החיבור?',
+              '<b>המושג:</b>',
+              "const followup=state.stage===1?'':",
+              'ה-depot שמתאים ל-depot_id שלה.'
+          ]
+          for token in required:
+              if token not in s:
+                  raise SystemExit('missing: '+token)
+          forbidden=[
+              'Role של depots = הוספת attribute לפלט: depot_name',
+              'Effect: ה-Grain נשאר route · מספר ה-rows נשמר · אין fanout',
+              'ה-depot היחיד שאליו היא מצביעה.'
+          ]
+          for token in forbidden:
+              if token in s:
+                  raise SystemExit('forbidden Stage 1 wording remains: '+token)
+          if 'מי שייך לכל אתר?' not in s:
+              raise SystemExit('Stage 2 guardrail missing')
+          PY
+          node --check /tmp/routecraft-app.js
+      - name: Commit validated app change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sql-lab/index.html
+          git commit -m "Clarify Stage 1 Cardinality language"
+          git push origin HEAD:routecraft-stage1-cardinality-copy
