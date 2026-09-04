@@ -15,11 +15,16 @@ jobs:
       - name: Patch only Stage 1 and validate JavaScript
         shell: bash
         run: |
-          python .tmp/patch_stage1_guided.py
+          if ! grep -q "stage1GuidedFlowHtml" sql-lab/index.html; then
+            python .tmp/patch_stage1_guided.py
+          fi
           python - <<'PY'
           from pathlib import Path
           import re
-          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          p=Path('sql-lab/index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("+'</pre></details>:'';", "+'</pre></details>':'';")
+          p.write_text(s,encoding='utf-8')
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
           Path('/tmp/routecraft-stage1.js').write_text('\n'.join(scripts),encoding='utf-8')
           assert 'SQL לחקירה · baseline' in s
