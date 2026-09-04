@@ -1,0 +1,42 @@
+name: RouteCraft Stage 1 remove duplicate business card
+on:
+  push:
+    branches: [routecraft-stage1-remove-duplicate]
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove duplicate business request card and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('sql-lab/index.html')
+          text=p.read_text(encoding='utf-8')
+          old=" const businessAnchor=state.stage===1?'<div class=\"stage1-business-anchor\"><b>הבקשה העסקית</b><span>'+esc(s.task)+'</span></div>':'';"
+          new=" const businessAnchor='';"
+          if old not in text:
+              raise SystemExit('businessAnchor marker not found')
+          text=text.replace(old,new,1)
+          p.write_text(text,encoding='utf-8')
+          assert "const stageTitle=state.stage===1?'מפרקים את הבקשה העסקית':'המודל הרלציוני';" in text
+          assert "const businessAnchor='';" in text
+          assert "stage1-business-anchor\"><b>הבקשה העסקית" not in text
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,re.S)
+          Path('/tmp/routecraft.js').write_text('\n'.join(scripts),encoding='utf-8')
+          print('duplicate card removed')
+          PY
+          node --check /tmp/routecraft.js
+          git diff --check
+          git config user.name "routecraft-bot"
+          git config user.email "routecraft-bot@users.noreply.github.com"
+          git add sql-lab/index.html
+          git commit -m "Remove duplicate Stage 1 business request card"
+          git push
