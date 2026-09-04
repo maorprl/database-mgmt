@@ -125,7 +125,7 @@
 .reason{padding:20px}.reason label{font-weight:900}.reason small{display:block;color:var(--muted);margin:5px 0 8px}.reason textarea{width:100%;min-height:90px;border:1px solid #d8dfda;border-radius:11px;padding:11px;resize:vertical;outline:0}
 .structured{display:flex;flex-direction:column;gap:18px}.structured h4{margin:0 0 8px;font-size:14px}.answergrid{display:grid;grid-template-columns:150px 1fr;gap:8px 12px;align-items:center}.answergrid .rel{direction:ltr;text-align:left;font:12px Consolas,monospace;font-weight:800;color:#42564c}.answergrid select{width:100%;border:1px solid #d8dfda;border-radius:10px;padding:10px;background:white;color:var(--ink);outline:0;direction:ltr;text-align:left}
 .answer-exp{grid-column:1 / -1;margin:-2px 0 8px;padding:10px 12px;border-radius:9px;font-size:12px;line-height:1.65}
-.answer-exp.good{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}
+.answer-exp.good{background:#edf8f1;border:1px solid #bcdcc9;color:#285e43}.schema-evidence{margin:10px 0;padding:14px 16px;border:1px solid #c8d8cf;border-radius:12px;background:#f7fbf8}.schema-evidence-title{font-weight:900;margin-bottom:6px}.schema-evidence p{margin:0 0 10px;color:var(--muted);font-size:12px}.schema-evidence-grid{display:grid;grid-template-columns:max-content 1fr;gap:7px 12px;align-items:center;direction:ltr;text-align:left}.schema-evidence-grid code{font-weight:900}:root[data-theme="dark"] .schema-evidence{background:#152019;border-color:#3b5045}
 .answer-exp.wrong{background:#fff5f1;border:1px solid #efc9bc;color:#864b38}
 .answer-exp b{font-weight:900}
 .subq{padding:14px;border:1px solid #e4e9e5;border-radius:12px;background:#fafbf9}.subq p{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.55}.divider{height:1px;background:#e7ebe7}
@@ -305,7 +305,8 @@ const FK_EDGES=[
 
 let db=null, dbError='', preview='depots';
 const APP_STATE_VERSION=10;
-const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},exploreSql:{},exploreRan:{},notes:{},scratch:{},predAnswers:{},predChecked:{},sanityAnswers:{},sanityChecked:{},operationAnswers:{},operationChecked:{},operationHints:{},operationOpen:{},outputOpen:{},completed:[],skipped:[],hint:{},solution:{},solutionChoice:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{},previewRows:{},scaffoldAnswers:{},scaffoldChecked:{},checkFailures:{},skeletonOpen:{}});
+const STAGE1_FLOW_VERSION=2;
+const defaults=()=>({version:APP_STATE_VERSION,stage:0,sql:{},exploreSql:{},exploreRan:{},notes:{},scratch:{},predAnswers:{},predChecked:{},sanityAnswers:{},sanityChecked:{},operationAnswers:{},operationChecked:{},operationHints:{},operationOpen:{},outputOpen:{},completed:[],skipped:[],hint:{},solution:{},solutionChoice:{},decision:{},structured:{grain:{},card:{}},theme:'light',attempted:[],graphOpen:{},previewRows:{},scaffoldAnswers:{},scaffoldChecked:{},checkFailures:{},skeletonOpen:{},stage1FlowVersion:STAGE1_FLOW_VERSION});
 let state=load();
 function migrateState(x){
  const raw=x||{};
@@ -439,6 +440,24 @@ function migrateState(x){
  out.scaffoldChecked=out.scaffoldChecked||{};
  out.checkFailures=out.checkFailures||{};
  out.skeletonOpen=out.skeletonOpen||{};
+ if((raw.stage1FlowVersion||0)<STAGE1_FLOW_VERSION){
+   delete out.predAnswers[1];
+   delete out.predChecked[1];
+   delete out.sanityAnswers[1];
+   delete out.sanityChecked[1];
+   delete out.operationAnswers[1];
+   delete out.operationChecked[1];
+   delete out.operationHints[1];
+   delete out.operationOpen[1];
+   delete out.exploreSql[1];
+   delete out.exploreRan[1];
+   delete out.graphOpen[1];
+   delete out.hint[1];
+   delete out.solution[1];
+   out.completed=(out.completed||[]).filter(i=>i!==1);
+   out.attempted=(out.attempted||[]).filter(i=>i!==1);
+   out.stage1FlowVersion=STAGE1_FLOW_VERSION;
+ }
  out.theme=out.theme==='dark'?'dark':'light';
  out.version=APP_STATE_VERSION;
  return out;
@@ -446,7 +465,7 @@ function migrateState(x){
 function load(){try{
  const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
  const out=migrateState(raw);
- if((raw.version||0)<APP_STATE_VERSION)localStorage.setItem(STORAGE_KEY,JSON.stringify(out));
+ if((raw.version||0)<APP_STATE_VERSION||(raw.stage1FlowVersion||0)<STAGE1_FLOW_VERSION)localStorage.setItem(STORAGE_KEY,JSON.stringify(out));
  return out;
 }catch(e){return defaults();}}
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
@@ -1027,8 +1046,22 @@ function stage1SanityResolved(s){
 }
 function predictionQuizHtml(s){
  const byStage=(state.predAnswers||{})[state.stage]||{};
+ if(state.stage===1){
+   const renderQ=(qi)=>{
+     const q=s.predQuiz[qi],cur=byStage[qi]||'',checked=predQuestionChecked(1,qi);
+     const exp=(checked&&cur)?('<div class="answer-exp '+(cur===q.ans?'good':'wrong')+'"><b>'+(cur===q.ans?'נכון. ':'עוד לא. ')+'</b>'+esc(q.why)+'</div>'):'';
+     return '<div class="pred-q"><label>'+(qi+1)+'. '+esc(q.q)+'</label><select data-predq="'+qi+'"><option value="">בחרו...</option>'+q.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select><div class="actions"><button class="check" data-check-pred="'+qi+'">✓ בדוק תשובה</button></div>'+exp+'</div>';
+   };
+   let out=renderQ(0);
+   if(predQuestionResolved(1,s,0)){
+     out+='<div class="schema-evidence"><div class="schema-evidence-title">ראיות מה־Schema · חלק מהמשימה</div><p>כדי לענות על ה־cardinality, לא מנחשים. קראו את שני ה־keys:</p><div class="schema-evidence-grid"><code>routes.depot_id</code><span>Foreign Key · NOT NULL → <code>depots.depot_id</code></span><code>depots.depot_id</code><span>Primary Key</span></div></div>';
+     out+=renderQ(1);
+   }
+   if(predQuestionResolved(1,s,1))out+=renderQ(2);
+   if(predQuestionResolved(1,s,2))out+=renderQ(3);
+   return '<div class="pred-quiz">'+out+'</div>';
+ }
  const qs=s.predQuiz.map((q,qi)=>{
-   if(state.stage===1&&qi>0&&!predQuestionResolved(1,s,qi-1))return '';
    const cur=byStage[qi]||'';
    const checked=predQuestionChecked(state.stage,qi);
    const exp=(checked&&cur)?('<div class="answer-exp '+(cur===q.ans?'good':'wrong')+'"><b>'+(cur===q.ans?'נכון. ':'עוד לא. ')+'</b>'+esc(q.why)+'</div>'):'';
