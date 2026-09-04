@@ -1,0 +1,45 @@
+name: RouteCraft Stage 1 schema/state validation
+on:
+  push:
+    branches:
+      - routecraft-stage1-schema-fix
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch Stage 1 and validate
+        shell: bash
+        run: |
+          python .tmp/patch_stage1_schema_and_state.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
+          Path('/tmp/routecraft-stage1-schema-fix.js').write_text('\n'.join(scripts),encoding='utf-8')
+          stage1=s[s.index('{title:"איפה יצא כל מסלול?"'):s.index('{title:"מי שייך לכל אתר?"')]
+          assert 'מתוך route אחת, כמה rows ב-depots' in stage1
+          assert 'ראיות מה־Schema · חלק מהמשימה' in s
+          assert 'routes.depot_id' in s and 'Foreign Key · NOT NULL' in s and 'Primary Key' in s
+          assert 'STAGE1_FLOW_VERSION=2' in s
+          assert 'delete out.predAnswers[1]' in s
+          assert 'if(predQuestionResolved(1,s,1))out+=renderQ(2)' in s
+          assert 'if(predQuestionResolved(1,s,2))out+=renderQ(3)' in s
+          print('Stage 1 static checks passed')
+          PY
+          node --check /tmp/routecraft-stage1-schema-fix.js
+          git diff --check
+          git config user.name "routecraft-bot"
+          git config user.email "routecraft-bot@users.noreply.github.com"
+          git add sql-lab/index.html
+          if git diff --cached --quiet; then
+            echo 'No Stage 1 patch needed'
+            exit 0
+          fi
+          git commit -m "Show required schema evidence in RouteCraft Stage 1"
+          git push
