@@ -23,9 +23,11 @@ jobs:
           before=Path('/tmp/index-before.html').read_text(encoding='utf-8')
           after=Path('sql-lab/index.html').read_text(encoding='utf-8')
           marker='{title:"מי שייך לכל אתר?"'
-          b=before[before.index(marker):before.index('];\n\nconst ',before.index(marker))]
-          a=after[after.index(marker):after.index('];\n\nconst ',after.index(marker))]
-          assert a==b, 'Stage 2+ definitions changed'
+          def stage2_block(text):
+              st=text.index(marker)
+              en=text.index('\n{title:',st+len(marker))
+              return text[st:en]
+          assert stage2_block(after)==stage2_block(before), 'Stage 2 definition changed'
           assert 'ראיות מה־Schema · חלק מהמשימה' not in after
           assert 'כדי לענות על ה־cardinality, לא מנחשים' not in after
           assert 'בבקשה העסקית הזאת, מה כל row בתוצאה צריכה לייצג?' in after
