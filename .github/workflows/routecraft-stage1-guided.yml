@@ -1,0 +1,40 @@
+name: RouteCraft Stage 1 guided validation
+on:
+  push:
+    branches:
+      - routecraft-stage1-guided
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch only Stage 1 and validate JavaScript
+        shell: bash
+        run: |
+          python .tmp/patch_stage1_guided.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
+          Path('/tmp/routecraft-stage1.js').write_text('\n'.join(scripts),encoding='utf-8')
+          assert 'SQL לחקירה · baseline' in s
+          assert 'stage1GuidedFlowHtml' in s
+          assert 'Baseline: ב־`routes` יש 13 rows' not in s[s.index('{title:"איפה יצא כל מסלול?"'):s.index('{title:"מי שייך לכל אתר?"')]
+          print('static Stage 1 checks passed')
+          PY
+          node --check /tmp/routecraft-stage1.js
+          git diff --check
+          git config user.name "routecraft-bot"
+          git config user.email "routecraft-bot@users.noreply.github.com"
+          git add sql-lab/index.html
+          if git diff --cached --quiet; then
+            echo 'No Stage 1 patch needed'
+            exit 0
+          fi
+          git commit -m "Guide RouteCraft Stage 1 step by step"
+          git push
