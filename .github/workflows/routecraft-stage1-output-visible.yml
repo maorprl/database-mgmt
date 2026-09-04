@@ -1,0 +1,43 @@
+name: RouteCraft Stage 1 visible output validation
+on:
+  push:
+    branches: [routecraft-stage1-output-visible]
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch Stage 1 output and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .tmp/patch_stage1_output_visible.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          assert 'output:"depot_name, route_code, service_date, status, distance_km",sqlRequirement:"מיון לפי route_id.",pred:' in text
+          assert 'output:"depot_name, route_code, service_date, status, distance_km · מיון לפי route_id.",pred:' not in text
+          assert 'state.stage===1?\'<div class="output-req"><b>פלט מבוקש</b><span>\'+esc(s.output)' in text
+          assert "דרישת SQL: '+esc(s.sqlRequirement)+' · " in text
+          assert 'הצג דרישות פלט' in text, 'Generic output toggle for later stages was removed'
+          assert 'output:"depot_name, driver_name, license_class · מיון לפי driver_id."' in text, 'Stage 2 definition changed unexpectedly'
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,re.S)
+          Path('/tmp/routecraft-stage1-output-visible.js').write_text('\n'.join(scripts),encoding='utf-8')
+          print('Stage 1 output static checks passed')
+          PY
+          node --check /tmp/routecraft-stage1-output-visible.js
+          git diff --check
+          git config user.name "routecraft-bot"
+          git config user.email "routecraft-bot@users.noreply.github.com"
+          git add sql-lab/index.html
+          if git diff --cached --quiet; then
+            echo 'No Stage 1 output patch needed'
+            exit 0
+          fi
+          git commit -m "Show Stage 1 output requirements up front"
+          git push
