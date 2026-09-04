@@ -1137,18 +1137,6 @@ function operationChoiceResolved(s){
  return !!(state.operationChecked[state.stage]&&state.operationAnswers[state.stage]===s.operation.ans);
 }
 
-// EARLY_FLOW_GATE_V11
-function earlyStageFlow(){return state.stage>=1&&state.stage<=7;}
-function earlyPredictionResolved(s){
- if(!earlyStageFlow()||!s.predQuiz)return true;
- const a=(state.predAnswers||{})[String(state.stage)]||{};
- return s.predQuiz.every((q,qi)=>predQuestionChecked(state.stage,qi)&&a[String(qi)]===q.ans);
-}
-function earlySanityResolved(s){
- if(!earlyStageFlow())return true;
- return !!(s.sanity&&state.sanityChecked[state.stage]&&state.sanityAnswers[state.stage]===s.sanity.ans);
-}
-
 function operationHtml(s){
  if(s.intro||s.summary||!s.operation)return'';
  const op=s.operation;
@@ -1172,7 +1160,6 @@ function operationHtml(s){
    else if(checked)body+='<div class="op-feedback bad"><b>עוד לא.</b> חזרו ל-Grain ולתפקיד של כל relation.</div>';
    if(hintOpen&&op.hint)body+='<div class="op-hint">'+esc(op.hint)+'</div>';
  }
- if(earlyStageFlow())return '<section class="card operation-card"><div class="operation-title">תפקיד ה-relation לפני SQL</div>'+body+'</section>';
  return '<details class="card operation-card operation-help" id="operationHelp" '+(open?'open':'')+'><summary>לא בטוח איזו פעולה מתאימה?</summary><div class="operation-help-inner">'+body+'</div></details>';
 }
 
@@ -1238,13 +1225,12 @@ function render(){
  foreignSchemaHtml(s)+
  relationalModelHtml(s)+
  scratchHtml(s)+
- (earlyPredictionResolved(s)?operationHtml(s):'')+
+ operationHtml(s)+
  joinVizDisclosureHtml(s)+
- ((!earlyStageFlow()||operationChoiceResolved(s))?sanityHtml(s,false):'')+
- ((earlyStageFlow()&&operationChoiceResolved(s)&&!earlySanityResolved(s))?'<section class="card scaffold-gate"><b>לפני SQL: השלימו את ה-Sanity Check.</b><span>קבעו קודם מה אמור לקרות ל-rows, ורק אחר כך עברו לעורך.</span></section>':'')+
+ sanityHtml(s,false)+
  scaffoldHtml(s)+
  scaffoldGateHtml(s)+
- ((s.summary||s.intro||!scaffoldComplete(s)||!earlyPredictionResolved(s)||(earlyStageFlow()&&(!operationChoiceResolved(s)||!earlySanityResolved(s))))?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button></div></div></section>')+
+ ((s.summary||s.intro||!scaffoldComplete(s))?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button></div></div></section>')+
  skeletonHtml(s)+
  ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?sqlErrorHtml(lastError):resultHtml(lastResult))+(lastResult&&s.sanity?'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>':'')+'</section>':'')+
  (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')||queryFeedback.startsWith('התוצאה נכונה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
