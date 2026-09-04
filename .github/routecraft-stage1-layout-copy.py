@@ -11,6 +11,13 @@ def repl(old,new,label):
         raise SystemExit(f'{label}: expected 1 match, found {n}')
     s=s.replace(old,new,1)
 
+def repl_first(old,new,label):
+    global s
+    n=s.count(old)
+    if n<1:
+        raise SystemExit(f'{label}: expected at least 1 match, found 0')
+    s=s.replace(old,new,1)
+
 # 1) Make the Stage 1 Cardinality answer explicit about the direction and make Q4 tie back to it.
 repl(
 '''why:"Cardinality מתארת כמה rows מצד אחד יכולות להיות קשורות ל-row אחת מהצד השני, ובודקים כל כיוון בנפרד. כאן לכל route יש depot_id שחייב להתאים ל-depot_id שקיים ב-depots. מכיוון ש-depots.depot_id הוא Primary Key, לכל route מתאים depot אחד בדיוק. בכיוון ההפוך, depot אחד יכול להיות קשור ל-0, 1 או הרבה routes.",concept:"Cardinality: depots 1 → M routes — depot אחד יכול להיות קשור ל-routes רבות; כל route שייכת ל-depot אחד."},{q:"אם לכל route מתאים depot אחד בדיוק, מה יקרה אחרי החיבור?",opts:[["same","כל route תישאר שורה אחת"],["multiply","routes יוכפלו"],["drop","חלק מה-routes ייעלמו"],["aggregate","כמה routes יאוחדו לשורה אחת"]],ans:"same",why:"לכל route מצטרף depot אחד בלבד, ולכן כל route נשארת שורה אחת גם אחרי החיבור. ה-Grain נשאר route."}''',
@@ -40,7 +47,7 @@ repl(
 '''const renderQ=(qi,afterLabel='')=>{
      const q=s.predQuiz[qi],cur=byStage[qi]||'',checked=predQuestionChecked(1,qi);''',
 'renderQ signature')
-repl(
+repl_first(
 '''return '<div class="pred-q"><label>'+(qi+1)+'. '+esc(q.q)+'</label><select data-predq="'+qi+'"><option value="">בחרו...</option>'+q.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select><div class="actions"><button class="check" data-check-pred="'+qi+'">✓ בדוק תשובה</button></div>'+exp+'</div>';''',
 '''return '<div class="pred-q"><label>'+(qi+1)+'. '+esc(q.q)+'</label>'+afterLabel+'<select data-predq="'+qi+'"><option value="">בחרו...</option>'+q.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select><div class="actions"><button class="check" data-check-pred="'+qi+'">✓ בדוק תשובה</button></div>'+exp+'</div>';''',
 'renderQ body')
@@ -93,6 +100,5 @@ for text in required:
     if text not in s:
         raise SystemExit(f'missing required text: {text}')
 
-# No separate ON-completion exercise and no Stage 2+ structural changes are introduced by this patch.
 p.write_text(s,encoding='utf-8')
 print('patched', p)
