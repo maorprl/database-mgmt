@@ -1,0 +1,66 @@
+name: RouteCraft Stage 1 first concepts
+
+on:
+  push:
+    branches:
+      - routecraft-stage1-first-concepts
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: routecraft-stage1-first-concepts
+      - name: Patch first-use explanations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('sql-lab/index.html')
+          s = p.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  'why:"הבקשה היא רשימה של מסלולים. לכן כל row בתוצאה צריכה לייצג route אחת.",concept:"Output Grain = route"',
+                  'why:"הבקשה היא רשימה של מסלולים. לכן כל row בתוצאה צריכה לייצג route אחת. זה ה-Grain של התוצאה: Grain אומר מה row אחת מייצגת. אם ה-Grain הוא route, כל row מייצגת מסלול אחד — גם אם נוסיף אליה מידע מ-relations אחרות.",concept:"Output Grain = route — כל row בתוצאה מייצגת route אחת."'
+              ),
+              (
+                  'why:"לכל route יש depot_id שחייב להתאים ל-depot_id שקיים ב-depots. מכיוון ש-depots.depot_id הוא Primary Key, יש רק depot אחד עם אותו ערך. לכן לכל route מתאים depot אחד בדיוק. בכיוון ההפוך, depot אחד יכול להיות קשור לכמה routes.",concept:"Cardinality: הקשר depots → routes הוא 1:M — אחד לרבים."',
+                  'why:"Cardinality מתארת כמה rows מצד אחד יכולות להיות קשורות ל-row אחת מהצד השני, ובודקים כל כיוון בנפרד. כאן לכל route יש depot_id שחייב להתאים ל-depot_id שקיים ב-depots. מכיוון ש-depots.depot_id הוא Primary Key, לכל route מתאים depot אחד בדיוק. בכיוון ההפוך, depot אחד יכול להיות קשור ל-0, 1 או הרבה routes.",concept:"Cardinality: depots 1 → M routes — depot אחד יכול להיות קשור ל-routes רבות; כל route שייכת ל-depot אחד."'
+              ),
+          ]
+          for old, new in replacements:
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one match, found {count}: {old[:80]}')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', s)
+          inline = [x for x in scripts if x.strip()]
+          if not inline:
+              raise SystemExit('No inline script found')
+          Path('/tmp/app.js').write_text(inline[-1], encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+      - name: Guard scope
+        run: |
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "sql-lab/index.html"
+      - name: Commit validated app change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sql-lab/index.html
+          git commit -m "Explain Grain and Cardinality on first use"
+          git push origin HEAD:routecraft-stage1-first-concepts
