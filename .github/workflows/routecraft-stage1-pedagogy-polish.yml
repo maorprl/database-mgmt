@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '22'
       - name: Apply narrow Stage 1 patch
-        run: python .github/routecraft-stage1-pedagogy-polish.py
+        run: python .github/routecraft-stage1-pedagogy-polish-runner.py
       - name: Validate diff and JavaScript
         run: |
           git diff --check
