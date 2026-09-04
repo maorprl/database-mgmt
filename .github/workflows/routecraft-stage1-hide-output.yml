@@ -1,0 +1,61 @@
+name: RouteCraft Stage 1 hide output validation
+
+on:
+  push:
+    branches: [routecraft-stage1-hide-output]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Stage 1 only
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('sql-lab/index.html')
+          s=p.read_text(encoding='utf-8')
+          old='sqlRequirement:"מיון לפי route_id."'
+          new='sqlRequirement:"פלט: depot_name, route_code, service_date, status, distance_km · מיון לפי route_id."'
+          if old not in s:
+              raise SystemExit('stage1 sqlRequirement marker not found')
+          s=s.replace(old,new,1)
+          old2='+(s.output?(state.stage===1?\'<div class="output-req"><b>פלט מבוקש</b><span>\'+esc(s.output)+\'</span></div>\':(\'<div class="output-toggle"><button id="toggleOutput">\'+(state.outputOpen[state.stage]?\'הסתר דרישות פלט\':\'הצג דרישות פלט\')+\'</button></div>\'+(state.outputOpen[state.stage]?\'<div class="output-req"><b>דרישות פלט</b><span>\'+esc(s.output)+\'</span></div>\':\'\'))):\'\')'
+          new2='+(s.output&&state.stage!==1?(\'<div class="output-toggle"><button id="toggleOutput">\'+(state.outputOpen[state.stage]?\'הסתר דרישות פלט\':\'הצג דרישות פלט\')+\'</button></div>\'+(state.outputOpen[state.stage]?\'<div class="output-req"><b>דרישות פלט</b><span>\'+esc(s.output)+\'</span></div>\':\'\')):\'\')'
+          if old2 not in s:
+              raise SystemExit('stage1 visible output renderer marker not found')
+          s=s.replace(old2,new2,1)
+          s=s.replace("'דרישת SQL: '+esc(s.sqlRequirement)+' · '","'דרישות SQL: '+esc(s.sqlRequirement)+' · '",1)
+          p.write_text(s,encoding='utf-8')
+      - name: Validate JavaScript and guardrails
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          assert 'state.stage===1?\'<div class="output-req"><b>פלט מבוקש</b>' not in s
+          assert 'sqlRequirement:"פלט: depot_name, route_code, service_date, status, distance_km · מיון לפי route_id."' in s
+          assert "state.stage===1&&s.sqlRequirement" in s
+          assert "s.output&&state.stage!==1" in s
+          m=re.search(r'<script>([\s\S]*)</script>\s*</body>',s)
+          if not m: raise SystemExit('script block not found')
+          Path('/tmp/app.js').write_text(m.group(1),encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+          git diff --check
+      - name: Commit patch if needed
+        shell: bash
+        run: |
+          if git diff --quiet -- sql-lab/index.html; then
+            echo 'No patch needed'
+            exit 0
+          fi
+          git config user.name 'maorprl'
+          git config user.email 'maorperlov@gmail.com'
+          git add sql-lab/index.html
+          git commit -m 'Hide Stage 1 technical output until SQL'
+          git push
