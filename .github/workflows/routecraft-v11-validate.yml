@@ -15,83 +15,11 @@ jobs:
       - name: Patch early-stage flow and validate
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('sql-lab/index.html')
-          s=p.read_text(encoding='utf-8')
-          marker='EARLY_FLOW_GATE_V11'
-          if marker not in s:
-              old="""function operationChoiceResolved(s){
- if(!s.operation)return false;
- if(s.operation.mode==='teach')return !!state.operationChecked[state.stage];
- return !!(state.operationChecked[state.stage]&&state.operationAnswers[state.stage]===s.operation.ans);
-}
-"""
-              new=old+"""
-// EARLY_FLOW_GATE_V11
-function earlyStageFlow(){return state.stage>=1&&state.stage<=7;}
-function earlyPredictionResolved(s){
- if(!earlyStageFlow()||!s.predQuiz)return true;
- const a=(state.predAnswers||{})[String(state.stage)]||{};
- return s.predQuiz.every((q,qi)=>predQuestionChecked(state.stage,qi)&&a[String(qi)]===q.ans);
-}
-function earlySanityResolved(s){
- if(!earlyStageFlow())return true;
- return !!(s.sanity&&state.sanityChecked[state.stage]&&state.sanityAnswers[state.stage]===s.sanity.ans);
-}
-"""
-              if s.count(old)!=1:
-                  raise SystemExit('operationChoiceResolved marker mismatch')
-              s=s.replace(old,new,1)
-
-              old=""" return '<details class=\"card operation-card operation-help\" id=\"operationHelp\" '+(open?'open':'')+'><summary>לא בטוח איזו פעולה מתאימה?</summary><div class=\"operation-help-inner\">'+body+'</div></details>';
-}"""
-              new=""" if(earlyStageFlow())return '<section class=\"card operation-card\"><div class=\"operation-title\">תפקיד ה-relation לפני SQL</div>'+body+'</section>';
- return '<details class=\"card operation-card operation-help\" id=\"operationHelp\" '+(open?'open':'')+'><summary>לא בטוח איזו פעולה מתאימה?</summary><div class=\"operation-help-inner\">'+body+'</div></details>';
-}"""
-              if s.count(old)!=1:
-                  raise SystemExit('operationHtml return marker mismatch')
-              s=s.replace(old,new,1)
-
-              old=""" scratchHtml(s)+
- operationHtml(s)+
- joinVizDisclosureHtml(s)+
- sanityHtml(s,false)+
- scaffoldHtml(s)+
- scaffoldGateHtml(s)+
- ((s.summary||s.intro||!scaffoldComplete(s))?'':'<section class=\"editor\">"""
-              new=""" scratchHtml(s)+
- (earlyPredictionResolved(s)?operationHtml(s):'')+
- joinVizDisclosureHtml(s)+
- ((!earlyStageFlow()||operationChoiceResolved(s))?sanityHtml(s,false):'')+
- ((earlyStageFlow()&&operationChoiceResolved(s)&&!earlySanityResolved(s))?'<section class=\"card scaffold-gate\"><b>לפני SQL: השלימו את ה-Sanity Check.</b><span>קבעו קודם מה אמור לקרות ל-rows, ורק אחר כך עברו לעורך.</span></section>':'')+
- scaffoldHtml(s)+
- scaffoldGateHtml(s)+
- ((s.summary||s.intro||!scaffoldComplete(s)||!earlyPredictionResolved(s)||(earlyStageFlow()&&(!operationChoiceResolved(s)||!earlySanityResolved(s))))?'':'<section class=\"editor\">"""
-              if s.count(old)!=1:
-                  raise SystemExit('render flow marker mismatch')
-              s=s.replace(old,new,1)
-              p.write_text(s,encoding='utf-8')
-          PY
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
-          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
-          js='\n'.join(scripts)
-          Path('/tmp/routecraft.js').write_text(js,encoding='utf-8')
-          assert 'EARLY_FLOW_GATE_V11' in s
-          assert "תפקיד ה-relation לפני SQL" in s
-          assert "לפני SQL: השלימו את ה-Sanity Check" in s
-          print('flow markers ok')
-          PY
+          python -c "import base64;exec(base64.b64decode('ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgic3FsLWxhYi9pbmRleC5odG1sIikKcz1wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQptYXJrZXI9IkVBUkxZX0ZMT1dfR0FURV9WMTEiCmlmIG1hcmtlciBub3QgaW4gczoKICAgIG9sZD0iIiJmdW5jdGlvbiBvcGVyYXRpb25DaG9pY2VSZXNvbHZlZChzKXsKIGlmKCFzLm9wZXJhdGlvbilldHVybiBmYWxzZTsKIGlmKHMub3BlcmF0aW9uLm1vZGU9PT0ndGVhY2gnKXJldHVybiAhIXN0YXRlLm9wZXJhdGlvbkNoZWNrZWRbc3RhdGUuc3RhZ2VdOwogcmV0dXJuICEhKHN0YXRlLm9wZXJhdGlvbkNoZWNrZWRbc3RhdGUuc3RhZ2VdJiZzdGF0ZS5vcGVyYXRpb25BbnN3ZXJzW3N0YXRlLnN0YWdlXT09PXMub3BlcmF0aW9uLmFucyk7Cn0KIiIiCiAgICBuZXc9b2xkKyIiIgovLyBFQVJMWV9GTE9XX0dBVEVfVjExCmZ1bmN0aW9uIGVhcmx5U3RhZ2VGbG93KCl7cmV0dXJuIHN0YXRlLnN0YWdlPj0xJiZzdGF0ZS5zdGFnZTw9Nzt9CmZ1bmN0aW9uIGVhcmx5UHJlZGljdGlvblJlc29sdmVkKHMpewogaWYoIWVhcmx5U3RhZ2VGbG93KCl8fCFzLnByZWRRdWl6KXJldHVybiB0cnVlOwogY29uc3QgYT0oc3RhdGUucHJlZEFuc3dlcnN8fHt9KVtTdHJpbmcoc3RhdGUuc3RhZ2UpXXx8e307CiByZXR1cm4gcy5wcmVkUXVpei5ldmVyeSgocSxxaSk9PnByZWRRdWVzdGlvbkNoZWNrZWQoc3RhdGUuc3RhZ2UscWkpJiZhW1N0cmluZyhxaSldPT09cS5hbnMpOwp9CmZ1bmN0aW9uIGVhcmx5U2FuaXR5UmVzb2x2ZWQocyl7CiBpZighZWFybHlTdGFnZUZsb3coKSlyZXR1cm4gdHJ1ZTsKIHJldHVybiAhIShzLnNhbml0eSYmc3RhdGUuc2FuaXR5Q2hlY2tlZFtzdGF0ZS5zdGFnZV0mJnN0YXRlLnNhbml0eUFuc3dlcnNbc3RhdGUuc3RhZ2VdPT09cy5zYW5pdHkuYW5zKTsKfQoiIiIKICAgIGlmIHMuY291bnQob2xkKSE9MTogcmFpc2UgU3lzdGVtRXhpdCgib3BlcmF0aW9uQ2hvaWNlUmVzb2x2ZWQgbWFya2VyIG1pc21hdGNoIikKICAgIHM9cy5yZXBsYWNlKG9sZCxuZXcsMSkKICAgIG9sZD0iIiIgcmV0dXJuICc8ZGV0YWlscyBjbGFzcz0iY2FyZCBvcGVyYXRpb24tY2FyZCBvcGVyYXRpb24taGVscCIgaWQ9Im9wZXJhdGlvbkhlbHAiICcrKG9wZW4/J29wZW4nOicnKSsnPjxzdW1tYXJ5Ptec15Ag15HXmdeY15XXlyDXkNeW15bW15Ug16TXoteV15XXnNeUINee16rXkNeZ150/PC9zdW1tYXJ5PjxkaXYgY2xhc3M9Im9wZXJhdGlvbi1oZWxwLWlubmVyIj4nK2JvZHkrJzwvZGl2PjwvZGV0YWlscz4nOwp9IiIiCiAgICBuZXc9IiIiIGlmKGVhcmx5U3RhZ2VGbG93KCkpcmV0dXJuICc8c2VjdGlvbiBjbGFzcz0iY2FyZCBvcGVyYXRpb24tY2FyZCI+PGRpdiBjbGFzcz0ib3BlcmF0aW9uLXRpdGxlIj7XqNeV16fXmNecINeULXJlbGF0aW9uINec16TXoNeZIFNRTDwvZGl2PicrYm9keSsnPC9zZWN0aW9uPic7CiByZXR1cm4gJzxkZXRhaWxzIGNsYXNzPSJjYXJkIG9wZXJhdGlvbi1jYXJkIG9wZXJhdGlvbi1oZWxwIiBpZD0ib3BlcmF0aW9uSGVscCIgJysob3Blbj8nb3Blbic6JycpKyc+PHN1bW1hcnk+15zXkCDXkdeZ15jXldepINeQ15nXlteVINek16LXldec15Qg157XqNeQ15nXnteUPzwvc3VtbWFyeT48ZGl2IGNsYXNzPSJvcGVyYXRpb24taGVscC1pbm5lciI+Jytib2R5Kyc8L2Rpdj48L2RldGFpbHM+JzsKfSIiIgogICAgaWYgcy5jb3VudChvbGQpIT0xOiByYWlzZSBTeXN0ZW1FeGl0KCJvcGVyYXRpb25IdG1sIHJldHVybiBtYXJrZXIgbWlzbWF0Y2giKQogICAgcz1zLnJlcGxhY2Uob2xkLG5ldyw xMSkKICAgIG9sZD0iIiIgc2NyYXRjaEh0bWwocykrCiBvcGVyYXRpb25IdG1sKHMpKwogam9pblZpelRpc2Nsb3N1cmVIdG1sKHMpKwogc2FuaXR5SHRtbChzLGZhbHNlKSsKIHNjYWZmb2xkSHRtbChzKSsKIHNjYWZmb2xkR2F0ZUh0bWwocykrCiAoKHMuc3VtbWFyeXx8cy5pbnRyb3x8IXNjYWZmb2xkQ29tcGxldGUocykpPyc nOic8c2VjdGlvbiBjbGFzcz0iZWRpdG9yIj4iIiIKICAgIG5ldz0iIiIgc2NyYXRjaEh0bWwocykrCiAoZWFybHlQcmVkaWN0aW9uUmVzb2x2ZWQocy k/b3BlcmF0aW9uSHRtbChzKTonJykrCiBqb2luVml6RGlzY2xvc3VyZUh0bWwocykrCiAoKCF lYXJseVN0YWdlRmxvdygpfHxvcGVyYXRpb25DaG9pY2VSZXNvbHZlZChzKSk/c2FuaXR5SHRtbChzLGZhbHNlKTonJykrCiAoKGVhcmx5U3RhZ2VGbG93KCkmJm9wZXJhdGlvbkNob2ljZVJlc29sdmVkKHMpJiYhZWFybHlTYW5pdHlSZXNvbHZlZChzKSk/JzxzZWN0aW9uIGNsYXNzPSJjYXJkIHNjYWZmb2xkLWdhdGUiPjxiPtct9eDXmSDTlfhMTDrINeq15zXmdee15Ug15DXqiDXlC1TYW5pdHkgQ2hlY2suPC9iPjxzcGFuPtfl16HXoteVINen15XXk9edINee15Qg15DXnteV16gg15zXmF1yb3dzLCDXldeokNepINeQ15fXqCDXmyXv95og15LXotep16jXldehPc8vc3Bhbj48L3NlY3Rpb24+JzonJykrCiBzY2FmZm9sZEh0bWwocykrCiBzY2FmZm9sZEdhdGVIdG1sKHMpKwogKChzLnN1bW1hcnl8fHMuaW50cm98fCFzY2FmZm9sZENvbXBsZXRlKHMpfHwhZWFybHlQcmVkaWN0aW9uUmVzb2x2ZWQocy k8fChlYXJseVN0YWdlRmxvdygpJiYoIW9wZXJhdGlvbkNob2ljZVJlc29sdmVkKHMpfHwhZWFybHlTYW5pdHlSZXNvbHZlZChzKSkpPyc nOic8c2VjdGlvbiBjbGFzcz0iZWRpdG9yIj4iIiIKICAgIGlmIHMuY291bnQob2xkKSE9MTogcmFpc2UgU3lzdGVtRXhpdCgicmVuZGVyIGZsb3cgbWFya2VyIG1pc21hdGNoIikKICAgIHM9cy5yZXBsYWNlKG9sZCxuZXcsMSkKICAgIHAud3JpdGVfdGV4dChzLGVuY29kaW5nPSJ1dGYtOCIpCgppbXBvcnQgcmUKcz1wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQpzY3JpcHRzPXJlLmZpbmRhbGwocic8c2NyaXB0KD86XHMbXj5dKik/KD8uKik8L3NjcmlwdD4nLHMs cmUuUykKanM9IlxuIi5qb2luKHNjcmlwdHMpClBhdGgoIi90bXAvcm91dGVjcmFmdC5qcyIpLndyaXRlX3RleHQoanMsZW5jb2Rpbmc9InV0Zi04IikKYXNzZXJ0ICJFQVJMWV9GTE9XX0dBVEVfVjExIiBpbiBzCmFzc2VydCAi16rXpNeV15nXkyBoZS1yZWxhdGlvbiDcpteXoNeZIFNRTCIGluIHMKYXNzZXJ0ICLXmdek16DXmSBTUUw6INeU16nXnNeZ157XldeoINeQ16og15QtU2FuaXR5IENoZWNrIiBpbiBzCnByaW50KCJmbG93IG1hcmtlcnMgb2siKQ=='))"
           node --check /tmp/routecraft.js
-          if git diff --quiet -- sql-lab/index.html; then
-            echo 'No patch needed'
-            exit 0
-          fi
-          git config user.name "routecraft-bot"
-          git config user.email "routecraft-bot@users.noreply.github.com"
+          if git diff --quiet -- sql-lab/index.html; then echo 'No patch needed'; exit 0; fi
+          git config user.name routecraft-bot
+          git config user.email routecraft-bot@users.noreply.github.com
           git add sql-lab/index.html
-          git commit -m "Enforce early relational reasoning flow"
+          git commit -m 'Enforce early relational reasoning flow'
           git push
