@@ -1,0 +1,28 @@
+name: RouteCraft v11 syntax validation
+on:
+  push:
+    branches:
+      - routecraft-early-pedagogy-v11
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate patched RouteCraft script
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          assert 'const APP_STATE_VERSION=11;' in s
+          assert '// EARLY_PEDAGOGY_V11' in s
+          assert 'STAGES[7].short="ממונה ונהג";' in s
+          m=re.search(r'<script>\s*(const STORAGE_KEY=.*?)</script>',s,re.S)
+          assert m, 'inline app script not found'
+          Path('/tmp/routecraft-app.js').write_text(m.group(1),encoding='utf-8')
+          print('markers validated')
+          PY
+          node --check /tmp/routecraft-app.js
