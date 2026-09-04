@@ -479,7 +479,10 @@ function skipped(i){return (state.skipped||[]).includes(i);}
 function passed(i){return done(i)||skipped(i);}
 function firstIncomplete(){for(let i=0;i<STAGES.length;i++)if(!passed(i))return i;return STAGES.length-1;}
 function allowed(i){return true;}
-function relationGraphUnlocked(){return true;}
+function relationGraphUnlocked(){
+ if(state.stage!==1)return true;
+ return (state.attempted||[]).includes(1)||state.hint[1]!==undefined||!!state.operationHints[1];
+}
 function relationGraphOpen(){return !!state.graphOpen[state.stage];}
 function norm(r){if(!r)return'';return JSON.stringify([r.columns,r.values.map(x=>x.map(v=>v===null?null:v)).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))]);}
 function rowKey(row){return JSON.stringify(row.map(v=>v===null?null:v));}
@@ -1162,10 +1165,10 @@ function stage1ExplorationHtml(s){
 }
 function stage1GuidedFlowHtml(s){
  if(state.stage!==1)return '';
- let out='';
- if(stage1ReasoningResolved(s))out+=stage1ExplorationHtml(s);
+ if(!stage1ReasoningResolved(s))return '';
+ let out=stage1ExplorationHtml(s);
  if((state.exploreRan||{})[1])out+=sanityHtml(s,false);
- if(stage1SanityResolved(s))out+=operationHtml(s)+joinVizDisclosureHtml(s);
+ if((state.exploreRan||{})[1]&&stage1SanityResolved(s))out+=operationHtml(s)+joinVizDisclosureHtml(s);
  return out;
 }
 function runStage1Explore(){
@@ -1186,7 +1189,8 @@ function sqlSupportHtml(s,hintText,principleText){
  const alts=Array.isArray(s.altSolutions)?s.altSolutions:[];
  const choice=Math.max(0,Math.min(Number((state.solutionChoice||{})[state.stage]||0),alts.length));
  const options=[{label:'הדרך המרכזית',sql:s.solution,note:''}].concat(alts.map((a,i)=>({label:a.label||('דרך חלופית '+(i+1)),sql:a.sql,note:(s.operation&&s.operation.alt&&i===0)?s.operation.alt:''})));
- let out='<section class="sql-support"><div class="support-actions"><button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרונות</button><button class="clearbtn" id="clearStage">נקה שלב</button></div>';
+ const allowFullSolution=state.stage!==1||(state.attempted||[]).includes(1);
+ let out='<section class="sql-support"><div class="support-actions"><button class="hintbtn" id="hint">רמז</button>'+(allowFullSolution?'<button class="solutionbtn" id="solution">פתרונות</button>':'')+'<button class="clearbtn" id="clearStage">נקה שלב</button></div>';
  if(hintOpen)out+='<div class="hintbox">'+hintText+'</div>';
  if(done(state.stage)&&s.gotcha)out+='<details class="gotcha-box"><summary>מלכודת שכדאי להכיר</summary><p>'+esc(s.gotcha)+'</p></details>';
  if(solutionOpen){
