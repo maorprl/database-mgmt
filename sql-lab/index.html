@@ -1099,7 +1099,7 @@ function relationalModelHtml(s){
  const lesson=s.lesson?'<div class="model-lesson"><b>עיקרון רלציוני:</b> '+esc(s.lesson)+'</div>':'';
  const followup=(model||lesson)?'<div id="predictionFollowup" class="prediction-followup '+(attemptedPred?'':'is-hidden')+'">'+model+lesson+'</div>':'';
  const stageTitle=state.stage===1?'מפרקים את הבקשה העסקית':'המודל הרלציוני';
- const businessAnchor=state.stage===1?'<div class="stage1-business-anchor"><b>הבקשה העסקית</b><span>'+esc(s.task)+'</span></div>':'';
+ const businessAnchor='';
  return '<section class="card relational-card"><div class="relational-title">'+stageTitle+'</div>'+businessAnchor+quiz+followup+'</section>';
 }
 
