@@ -18,6 +18,9 @@ jobs:
           if ! grep -q "stage1GuidedFlowHtml" sql-lab/index.html; then
             python .tmp/patch_stage1_guided.py
           fi
+          if ! grep -q "allowFullSolution" sql-lab/index.html; then
+            python .tmp/fix_stage1_guardrails.py
+          fi
           python - <<'PY'
           from pathlib import Path
           import re
@@ -27,9 +30,13 @@ jobs:
           p.write_text(s,encoding='utf-8')
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
           Path('/tmp/routecraft-stage1.js').write_text('\n'.join(scripts),encoding='utf-8')
+          a=s.index('{title:"איפה יצא כל מסלול?"')
+          b=s.index('{title:"מי שייך לכל אתר?"')
           assert 'SQL לחקירה · baseline' in s
           assert 'stage1GuidedFlowHtml' in s
-          assert 'Baseline: ב־`routes` יש 13 rows' not in s[s.index('{title:"איפה יצא כל מסלול?"'):s.index('{title:"מי שייך לכל אתר?"')]
+          assert 'allowFullSolution' in s
+          assert 'Baseline: ב־`routes` יש 13 rows' not in s[a:b]
+          assert 'if(state.stage!==1)return true;' in s
           print('static Stage 1 checks passed')
           PY
           node --check /tmp/routecraft-stage1.js
@@ -41,5 +48,5 @@ jobs:
             echo 'No Stage 1 patch needed'
             exit 0
           fi
-          git commit -m "Guide RouteCraft Stage 1 step by step"
+          git commit -m "Tighten RouteCraft Stage 1 guardrails"
           git push
