@@ -35,15 +35,16 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           s=Path('sql-lab/index.html').read_text(encoding='utf-8')
           assert 'state.stage===1?\'<div class="output-req"><b>פלט מבוקש</b>' not in s
           assert 'sqlRequirement:"פלט: depot_name, route_code, service_date, status, distance_km · מיון לפי route_id."' in s
           assert "state.stage===1&&s.sqlRequirement" in s
           assert "s.output&&state.stage!==1" in s
-          m=re.search(r'<script>([\s\S]*)</script>\s*</body>',s)
-          if not m: raise SystemExit('script block not found')
-          Path('/tmp/app.js').write_text(m.group(1),encoding='utf-8')
+          start=s.rfind('<script>')
+          end=s.rfind('</script>')
+          if start < 0 or end <= start:
+              raise SystemExit('inline script block not found')
+          Path('/tmp/app.js').write_text(s[start+8:end],encoding='utf-8')
           PY
           node --check /tmp/app.js
           git diff --check
