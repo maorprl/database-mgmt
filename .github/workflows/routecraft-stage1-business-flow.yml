@@ -1,0 +1,52 @@
+name: RouteCraft Stage 1 business flow validation
+on:
+  push:
+    branches: [routecraft-stage1-business-flow]
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch Stage 1 and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp sql-lab/index.html /tmp/index-before.html
+          python .tmp/patch_stage1_business_flow.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          before=Path('/tmp/index-before.html').read_text(encoding='utf-8')
+          after=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          marker='{title:"מי שייך לכל אתר?"'
+          b=before[before.index(marker):before.index('];\n\nconst ',before.index(marker))]
+          a=after[after.index(marker):after.index('];\n\nconst ',after.index(marker))]
+          assert a==b, 'Stage 2+ definitions changed'
+          assert 'ראיות מה־Schema · חלק מהמשימה' not in after
+          assert 'כדי לענות על ה־cardinality, לא מנחשים' not in after
+          assert 'בבקשה העסקית הזאת, מה כל row בתוצאה צריכה לייצג?' in after
+          assert 'איזה פריט לא נמצא ב-routes' in after
+          assert 'stage1RelationsHtml()' in after
+          assert 'איך קוראים את הסימון?' in after
+          assert 'STAGE1_FLOW_VERSION=3' in after
+          assert "if(predQuestionResolved(1,s,0))out+=stage1RelationsHtml()+renderQ(1)" in after
+          assert "if(predQuestionResolved(1,s,1))out+=stage1KeyGuideHtml()+renderQ(2)" in after
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',after,re.S)
+          Path('/tmp/routecraft-stage1-business-flow.js').write_text('\n'.join(scripts),encoding='utf-8')
+          print('Stage 1 static checks passed')
+          PY
+          node --check /tmp/routecraft-stage1-business-flow.js
+          git diff --check
+          git config user.name "routecraft-bot"
+          git config user.email "routecraft-bot@users.noreply.github.com"
+          git add sql-lab/index.html
+          if git diff --cached --quiet; then
+            echo 'No Stage 1 patch needed'
+            exit 0
+          fi
+          git commit -m "Refine RouteCraft Stage 1 business-led guidance"
+          git push
