@@ -1245,7 +1245,7 @@ function sqlSupportHtml(s,hintText,principleText){
  const alts=Array.isArray(s.altSolutions)?s.altSolutions:[];
  const choice=Math.max(0,Math.min(Number((state.solutionChoice||{})[state.stage]||0),alts.length));
  const options=[{label:'הדרך המרכזית',sql:s.solution,note:''}].concat(alts.map((a,i)=>({label:a.label||('דרך חלופית '+(i+1)),sql:a.sql,note:(s.operation&&s.operation.alt&&i===0)?s.operation.alt:''})));
- const allowFullSolution=state.stage!==1||(state.attempted||[]).includes(1);
+ const allowFullSolution=state.stage!==1||operationChoiceResolved(s);
  let out='<section class="sql-support"><div class="support-actions"><button class="hintbtn" id="hint">רמז</button>'+(allowFullSolution?'<button class="solutionbtn" id="solution">פתרונות</button>':'')+'<button class="clearbtn" id="clearStage">נקה שלב</button></div>';
  if(hintOpen)out+='<div class="hintbox">'+hintText+'</div>';
  if(done(state.stage)&&s.gotcha)out+='<details class="gotcha-box"><summary>מלכודת שכדאי להכיר</summary><p>'+esc(s.gotcha)+'</p></details>';
