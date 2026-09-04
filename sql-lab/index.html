@@ -76,6 +76,10 @@
 :root[data-theme="dark"] .operation-card .op-alt{background:#182126;border-color:#3c484f}
 .relational-card{padding:17px 19px}
 .relational-title{font-size:12px;font-weight:900;color:#315d49;margin-bottom:10px}
+.relational-intro{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.65}
+.learning-summary{margin-top:12px;padding:11px 13px;border-radius:10px;background:#edf8f1;border:1px solid #bcdcc9;color:#285e43;font-size:12px;line-height:1.7}
+.relational-plan{margin-top:11px;padding:12px 14px;border-radius:10px;background:#17251f;color:#e6eee9;border:1px solid #2f473b;direction:ltr;text-align:left;white-space:pre-wrap;font:13px/1.75 Consolas,monospace}
+.flow-gate{padding:14px 17px;border-style:dashed;display:flex;flex-direction:column;gap:4px}.flow-gate b{font-size:12px}.flow-gate span{font-size:11px;color:var(--muted)}
 .model-summary{font-size:13px;line-height:1.7;padding:10px 12px;background:#f7faf8;border:1px solid #dde8e1;border-radius:10px}
 .model-lesson{margin-top:10px;padding:10px 12px;background:#fff8ed;border:1px solid #ead8b9;border-radius:10px;font-size:12px;line-height:1.7;color:#6f5b38}
 .model-prompt{margin-top:10px;font-size:12px;line-height:1.65;color:var(--muted)}
@@ -92,6 +96,7 @@
 .result-verify{padding:12px 16px;border-top:1px solid var(--line);background:#f7faf8;font-size:12px;line-height:1.7;color:#51645a}
 .result-verify b{color:#285e43}
 :root[data-theme="dark"] .model-summary,:root[data-theme="dark"] .scratch-card-inner textarea{background:#10241c;color:#e8f0eb;border-color:#46534c}
+:root[data-theme="dark"] .learning-summary{background:#173025;border-color:#365844;color:#bfe2ca}
 :root[data-theme="dark"] .model-lesson{background:#2b2418;border-color:#5a4930}
 :root[data-theme="dark"] .result-verify{background:#17231c}
 .operation-help{padding:0;overflow:hidden;background:var(--card);border-right:1px solid var(--line)}
@@ -258,21 +263,164 @@ const STAGES=[{title:"שפת הקורס",short:"שפת הקורס",eye:"פתיח
 {title:"סיכום: איך בוחרים פעולה?",short:"סיכום · מסגרת החלטה",eye:"סגירה · תפקיד לפני תחביר",summary:true,context:"אין שאילתה חדשה. בכל בעיה שאלו: מה ה-Grain עכשיו, מה ה-Grain הרצוי, והאם relation נוסף תורם matching rows למדד או רק בודק תנאי. לפני JOIN שעלול לשנות מדד, קובעים baseline; אחרי החיבור עושים sanity check מול המקור.",task:"עברו על מסגרת ההחלטה וענו על שאלות הסיכום מתוך עולם התפעול החדש.",starter:"",expected:null,note:"התאימו כל תרחיש לכלי לפי תפקידו.",hints:["צריך matching rows למדד → JOIN.","אותה relation בשני תפקידים → Self Join עם aliases.","צריך לאחד rows משתי תוצאות → UNION / UNION ALL.","רק קיום/היעדר בלי לשנות Grain → EXISTS / NOT EXISTS.","כמה ענפי 1:M למדדים → pre-aggregation לפני JOIN.","חישוב בתוך קבוצה בלי לצמצם rows → Window Function."],solution:"Matching rows תורמות למדד → JOIN. אותה relation בשני תפקידים → Self Join עם aliases. איחוד rows מתוצאות תואמות → UNION / UNION ALL. תנאי קיום/היעדר בלי לשנות Grain → EXISTS / NOT EXISTS. שמירת rows ללא match → LEFT OUTER JOIN + COALESCE. שינוי יחידת ניתוח → GROUP BY. סינון aggregate → HAVING. כמה ענפי 1:M → pre-aggregation. חישוב בתוך קבוצה בלי לשנות Grain → Window Function.",principle:"בחירת הכלי נגזרת מתפקידו בבעיה ומה-Grain, לא מכותרת תחבירית."}
 ];
 
-function introHtml(){
+/*
+ * A single learning contract is applied to every exercise:
+ * business request -> requested grain -> source grain -> match multiplicity
+ * -> grain effect -> relational operation -> relational plan -> SQL.
+ * The old per-stage text is intentionally overridden here so the whole course
+ * follows one coherent reasoning path instead of revealing SQL tools early.
+ */
+const LEARNING_FLOW={
+1:{eye:"שילוב מידע · שמירת Grain",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["depot","depot"],["route","route"],["vehicle","vehicle"],["stop","stop"]],ans:"route",why:"הבקשה מבקשת row אחת לכל route."},
+ {q:"באיזו relation כבר קיימת row אחת לכל יחידת פלט?",opts:[["routes","routes"],["depots","depots"],["drivers","drivers"],["stops","stops"]],ans:"routes",why:"routes היא נקודת המוצא: כל row בה מייצגת route אחת."},
+ {q:"למה routes לבדה אינה מספיקה לבקשה?",opts:[["name","depot_name נמצא ב-depots"],["count","צריך קודם לספור routes"],["filter","צריך לסנן routes"],["enough","routes כבר מכילה הכול"]],ans:"name",why:"פרטי המסלול נמצאים ב-routes, אבל depot_name נמצא ב-depots."},
+ {q:"לכל route, כמה depots יכולים להתאים דרך routes.depot_id?",opts:[["one","אחד"],["many","כמה"],["zero-many","אפס או כמה"],["unknown","אי אפשר לדעת מהסכמה"]],ans:"one",why:"ה-Foreign Key מפנה ל-Primary Key יחיד ב-depots; לכן כל route מקבלת match אחד."},
+ {q:"מה יקרה ל-Grain לאחר הוספת פרטי ה-depot?",opts:[["same","יישאר route"],["depot","ישתנה ל-depot"],["pair","ישתנה ל-route–depot"],["unknown","נקבע רק אחרי COUNT(*)"]],ans:"same",why:"match אחד לכל route מוסיף attributes ואינו מפצל את ה-route לכמה rows."}
+],takeaway:"התחלנו מ-routes כי היא כבר ב-Grain המבוקש. depots תורמת attribute אחד דרך match יחיד, ולכן ה-Grain נשמר.",operation:{mode:"guided",tool:"Relational Join → INNER JOIN",need:"צריך להוסיף לכל route attributes מ-row תואמת ב-depots.",q:"איזה תפקיד יש ל-depots בפתרון?",opts:[["enrich","לתרום attributes מה-row התואמת"],["exist","רק לבדוק אם route קיימת"],["group","לאגד כמה routes"],["stack","להוסיף rows מתחת ל-routes"]],ans:"enrich",why:"כאשר relation נוספת תורמת attributes מ-match, הפעולה הרלציונית היא Join. ב-SQL נתרגם אותה ל-INNER JOIN.",hint:"שאלו אם depot_name צריך להופיע בתוך אותה row של route."},plan:"π depot_name, route_code, service_date, status, distance_km\n(routes ⋈ routes.depot_id = depots.depot_id depots)",verify:"כל route צריכה להופיע פעם אחת. depot_name יכולה לחזור בין routes שונות בלי שזו תהיה כפילות."},
+2:{eye:"חזרות תקינות · Parent בתוך Child Grain",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["depot","depot"],["driver","driver"],["route","route"],["license","license_class"]],ans:"driver",why:"ה-directory דורש row אחת לכל driver."},
+ {q:"איזו relation כבר נמצאת ב-Grain הזה?",opts:[["drivers","drivers"],["depots","depots"],["routes","routes"],["vehicles","vehicles"]],ans:"drivers",why:"כל row ב-drivers מייצגת driver אחת."},
+ {q:"אם שלוש drivers שייכות לאותו depot, האם depot_name רשאי להופיע שלוש פעמים?",opts:[["yes","כן — פעם אחת בכל row של driver"],["no","לא — זו בהכרח כפילות"],["once","רק ב-row הראשונה"],["null","בשתי rows הוא צריך להיות NULL"]],ans:"yes",why:"ה-Grain הוא driver. חזרת attribute של parent בין child rows שונות היא תקינה."}
+],takeaway:"ערך של parent יכול לחזור בתוצאה בלי ליצור duplicate, כל עוד כל row מייצגת child שונה.",operation:{mode:"guided",tool:"Relational Join → INNER JOIN",need:"צריך לצרף לכל driver את שם ה-depot שאליו היא משויכת.",q:"מה depots צריכה לעשות כאן?",opts:[["enrich","לתרום depot_name לכל driver"],["exist","רק לבדוק קיום"],["group","לסכם drivers"],["stack","לאחד רשימות"]],ans:"enrich",why:"depot_name הוא attribute בפלט, ולכן צריך matching row מ-depots.",hint:"האם depot_name מופיע בפלט או רק בתנאי?"},plan:"π depot_name, driver_name, license_class\n(drivers ⋈ drivers.depot_id = depots.depot_id depots)",verify:"כל driver צריכה להופיע פעם אחת. חזרה של depot_name תקינה כאשר driver_name שונה."},
+3:{eye:"שילוב 1:M · שינוי Grain",short:"מסלול ועצירות",override:{title:"מה קורה ל-Grain כשמצרפים עצירות?",context:"מוקד השירות רוצה לראות את העצירות שבוצעו בכל route. Route יכולה לכלול יותר מעצירה אחת.",task:"בנו פירוט שמציג לכל stop את קוד ה-route, מספר העצירה והעיר.",output:"route_code, stop_seq, city · מיון לפי route_id ואז stop_seq.",starter:"",expected:"SELECT r.route_code,s.stop_seq,s.city FROM routes r INNER JOIN stops s ON s.route_id=r.route_id ORDER BY r.route_id,s.stop_seq;",solution:"SELECT r.route_code,s.stop_seq,s.city FROM routes r INNER JOIN stops s ON s.route_id=r.route_id ORDER BY r.route_id,s.stop_seq;",hints:["קבעו אם row מייצגת route או stop.","stops.route_id מפנה ל-routes.route_id.","Route אחת יכולה להתאים לכמה stop rows."],principle:"JOIN לצד ה-M יכול לשנות Grain: route אחת מתפצלת לכמה rows, אחת לכל stop.",fanoutTrap:false,trapId:null,scratch:"ציירו route אחת שממנה יוצאות כמה stop rows. כתבו ליד כל צד מה row אחת מייצגת.",joinViz:"inner",altSolutions:[]},questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["route","route"],["stop","stop"],["depot","depot"],["day","service_date"]],ans:"stop",why:"כל row בפירוט מתארת stop אחת בתוך route."},
+ {q:"מה ה-cardinality בכיוון routes → stops?",opts:[["one-many","1:M"],["one-one","1:1"],["many-many","M:M"],["zero-one","1:0..1"]],ans:"one-many",why:"Route אחת יכולה לכלול כמה stops; כל stop שייכת ל-route אחת."},
+ {q:"אם מתחילים מ-row אחת של route ומצרפים את כל ה-stops שלה, מה קורה?",opts:[["split","ה-route יכולה להתפצל לכמה output rows"],["same","תמיד נשארת row אחת"],["vanish","ה-route תמיד נעלמת"],["aggregate","ה-stops מתאגדות אוטומטית"]],ans:"split",why:"כל match בצד ה-M יוצר row. לכן יחידת התוצאה עוברת מ-route ל-stop."}
+],takeaway:"JOIN אינו תמיד רק הוספת columns. כאשר row אחת פוגשת כמה matches, היא מופיעה פעם אחת לכל match וה-Grain עשוי להשתנות.",operation:{mode:"guided",tool:"Relational Join → INNER JOIN",need:"צריך להחזיר את ה-stop rows ולהוסיף לכל אחת את route_code של ה-route שלה.",q:"איזו פעולה משלבת כל stop עם ה-route התואמת?",opts:[["join","שילוב matching rows"],["group","איגוד stops ל-route אחת"],["exist","בדיקת קיום בלבד"],["union","הנחת הרשימות זו מתחת לזו"]],ans:"join",why:"אנחנו צריכים attributes משתי relations עבור כל stop, ולכן מבצעים Join.",hint:"route_code צריך להופיע באותה row עם city."},plan:"π route_code, stop_seq, city\n(routes ⋈ routes.route_id = stops.route_id stops)",verify:"התוצאה צריכה להכיל row לכל stop. route_code תחזור כאשר לאותה route יש כמה stops — זו חזרה שנובעת מה-Grain החדש."},
+4:{eye:"מפתחות · בחירת קשר אמיתי",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["route","route"],["vehicle","vehicle"],["depot","depot"],["plate","plate_no"]],ans:"route",why:"הבקשה היא לזהות את הרכב ששימש כל route."},
+ {q:"איזה attribute מקשר route לרכב שהוקצה לה?",opts:[["vehicle_id","routes.vehicle_id"],["depot_id","routes.depot_id"],["route_id","routes.route_id"],["plate_no","routes.plate_no"]],ans:"vehicle_id",why:"routes.vehicle_id הוא Foreign Key אל vehicles.vehicle_id."},
+ {q:"האם שילוב vehicles צפוי לשנות את Grain ה-route?",opts:[["no","לא — לכל route מתאים vehicle אחד"],["yes","כן — כל vehicle יוצר כמה routes חדשות"],["maybe","רק לפי מספר ה-rows בטבלה"],["group","כן — ה-Grain יהפוך ל-vehicle_type"]],ans:"no",why:"הולכים מה-Foreign Key אל Primary Key יחיד, ולכן אין ריבוי matches לכל route."}
+],takeaway:"בוחרים קשר לפי PK/FK ולא לפי שמות או ערכים שנראים דומים. כיוון ה-match קובע אם ה-Grain נשמר.",operation:{mode:"guided",tool:"Relational Join → INNER JOIN",need:"צריך להוסיף attributes של vehicle לכל route.",q:"מה תפקיד vehicles?",opts:[["enrich","לתרום attributes מה-vehicle התואם"],["exist","רק לבדוק אם vehicle קיימת"],["group","לסכם routes לפי רכב"],["stack","להוסיף vehicle rows מתחת ל-route rows"]],ans:"enrich",why:"plate_no, vehicle_type ו-capacity_kg נדרשים בפלט, ולכן vehicles תורמת matching row.",hint:"חפשו אילו attributes נדרשים בפלט ומאיזו relation הם מגיעים."},plan:"π route_code, plate_no, vehicle_type, capacity_kg\n(routes ⋈ routes.vehicle_id = vehicles.vehicle_id vehicles)",verify:"כל route צריכה להופיע פעם אחת עם vehicle אחד."},
+5:{eye:"התאמה אופציונלית · שמירת ה-Base Grain",short:"רכבים בלי tracker",override:{title:"איך שומרים רכב שאין לו tracker?",context:"צוות Fleet רוצה inventory של כל vehicles, גם כאשר עדיין לא הותקן בהן tracker.",task:"הציגו כל vehicle עם מספר הרישוי ותאריך התקנת ה-tracker, אם קיים.",output:"plate_no, installed_at · מיון לפי vehicle_id.",starter:"",expected:"SELECT v.plate_no,t.installed_at FROM vehicles v LEFT OUTER JOIN vehicle_trackers t ON t.vehicle_id=v.vehicle_id ORDER BY v.vehicle_id;",solution:"SELECT v.plate_no,t.installed_at FROM vehicles v LEFT OUTER JOIN vehicle_trackers t ON t.vehicle_id=v.vehicle_id ORDER BY v.vehicle_id;",hints:["ה-output Grain הוא vehicle.","vehicle_trackers.vehicle_id הוא UNIQUE.","ה-relation שחייבת להישמר נמצאת בצד שמאל."],principle:"LEFT OUTER JOIN שומר את ה-Base Grain גם כשאין match; attributes מהצד החסר מקבלים NULL.",altSolutions:[]},questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["vehicle","vehicle"],["tracker","tracker"],["depot","depot"],["route","route"]],ans:"vehicle",why:"ה-inventory דורש row אחת לכל vehicle."},
+ {q:"כמה tracker rows יכולות להתאים לכל vehicle לפי UNIQUE על vehicle_trackers.vehicle_id?",opts:[["zero-one","אפס או אחת"],["many","כמה"],["exact-one","אחת בהכרח"],["unknown","אי אפשר לדעת"]],ans:"zero-one",why:"UNIQUE מונע יותר מאחת, אך אינו מחייב שקיימת tracker."},
+ {q:"מה חייב לקרות ל-vehicle ללא tracker?",opts:[["keep","להישאר עם installed_at = NULL"],["drop","להיעלם"],["duplicate","להופיע פעמיים"],["zero","לקבל installed_at = 0"]],ans:"keep",why:"הבקשה דורשת את כל vehicles, גם ללא match."}
+],takeaway:"כש-match הוא אופציונלי אבל ה-base rows חייבות להישמר, ה-Grain נשאר base וה-attributes החסרים מיוצגים ב-NULL.",operation:{mode:"guided",tool:"Left Outer Join → LEFT OUTER JOIN",need:"צריך לשמור את כל vehicles ולהוסיף tracker רק כשקיימת התאמה.",q:"איזו התנהגות רלציונית נדרשת?",opts:[["left","שמור את כל ה-base rows והוסף match אם קיים"],["inner","החזר רק rows שיש להן match"],["exist","החזר רק תשובת כן/לא"],["union","אחד שתי רשימות אנכית"]],ans:"left",why:"זו פעולת Left Outer Join; ב-SQL נתרגם אותה ל-LEFT OUTER JOIN.",hint:"מי חייב להופיע גם כשאין התאמה?"},plan:"π plate_no, installed_at\n(vehicles ⟕ vehicles.vehicle_id = vehicle_trackers.vehicle_id vehicle_trackers)",verify:"כל vehicle צריכה להופיע פעם אחת. Vehicle ללא tracker תופיע עם installed_at = NULL."},
+6:{eye:"שרשרת קשרים · Grain לאורך הדרך",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["stop","stop"],["route","route"],["depot","depot"],["city","city"]],ans:"stop",why:"הפירוט דורש row לכל stop."},
+ {q:"איזו relation כבר נמצאת ב-Grain הזה?",opts:[["stops","stops"],["routes","routes"],["depots","depots"],["drivers","drivers"]],ans:"stops",why:"כל row ב-stops היא stop אחת."},
+ {q:"במסלול stops → routes → depots, כמה matches יש לכל stop בכל צעד?",opts:[["one-one","route אחת ואז depot אחד"],["many","כמה routes ואז כמה depots"],["zero","אין קשר ישיר או עקיף"],["aggregate","הקשרים דורשים GROUP BY"]],ans:"one-one",why:"stop מפנה ל-route אחת, וה-route מפנה ל-depot אחד; לכן Grain ה-stop נשמר לאורך השרשרת."}
+],takeaway:"בשרשרת joins בודקים match multiplicity בכל קצה. שני צעדי M→1 רצופים מוסיפים attributes בלי לשנות את Grain ה-stop.",operation:{mode:"guided",tool:"Join chain → שני INNER JOIN",need:"צריך לעבור מ-stop אל route ומשם אל depot כדי להביא attributes משתי relations.",q:"איזו תוכנית מקשרת את המידע בלי לדלג על key?",opts:[["chain","stops עם routes, ואז התוצאה עם depots"],["direct","stops ישירות עם depots"],["union","UNION בין שלוש relations"],["group","GROUP BY city"]],ans:"chain",why:"אין Foreign Key ישיר מ-stops ל-depots; עוברים דרך routes.",hint:"עקבו אחרי ה-Foreign Keys מהיחידה המבוקשת החוצה."},plan:"π stop_id, city, route_code, depot_name\n((stops ⋈ stops.route_id = routes.route_id routes)\n ⋈ routes.depot_id = depots.depot_id depots)",verify:"כל stop צריכה להופיע פעם אחת, עם route ו-depot יחידים."},
+7:{eye:"אותה Relation · שני תפקידים",short:"ממונה ונהג",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["driver","driver"],["supervisor","supervisor"],["depot","depot"],["pair","כל צמד נהגים אפשרי"]],ans:"driver",why:"ה-directory דורש row אחת לכל driver."},
+ {q:"מה מייצגות שתי ההופעות של drivers?",opts:[["roles","אחת driver ואחת supervisor"],["duplicates","שתי טבלאות זהות ללא תפקיד"],["history","עבר והווה"],["groups","שתי קבוצות license"]],ans:"roles",why:"אותה relation ממלאת שני תפקידים שונים, ולכן צריך aliases."},
+ {q:"כמה supervisors יכולות להתאים לכל driver, והאם match חייב להתקיים?",opts:[["zero-one","אפס או אחת"],["many","כמה"],["exact-one","אחת בהכרח"],["many-many","M:M"]],ans:"zero-one",why:"supervisor_id הוא nullable Foreign Key: יכולה להיות supervisor אחת או בכלל לא."}
+],takeaway:"Self Join אינו סוג קשר חדש. זו אותה relation בשני תפקידים, ועדיין בודקים Grain, multiplicity ושמירת rows.",operation:{mode:"guided",tool:"Self Join באמצעות LEFT OUTER JOIN",need:"צריך לשמור כל driver ולצרף row אחרת מ-drivers כאשר היא הממונה שלה.",q:"איזו תוכנית מתאימה?",opts:[["self-left","שתי aliases של drivers עם Left Join"],["inner","Inner Join שמוחק מנהלים ללא supervisor"],["union","UNION של drivers עם עצמה"],["group","GROUP BY supervisor_id"]],ans:"self-left",why:"alias אחת מייצגת driver והשנייה supervisor; Left Join שומר גם driver ללא supervisor.",hint:"אותה relation מופיעה בשני תפקידים, וה-match אופציונלי."},plan:"π driver.driver_name, supervisor.driver_name\n(drivers AS driver ⟕ driver.supervisor_id = supervisor.driver_id drivers AS supervisor)",verify:"כל driver צריכה להופיע פעם אחת; ללא supervisor מתקבל supervisor_name = NULL."},
+8:{eye:"שתי רשימות · איחוד אנכי",short:"איחוד שתי רשימות",questions:[
+ {q:"מה המבנה של שתי הרשימות שרוצים לאחד?",opts:[["same","אותו מספר attributes ובאותם domains"],["different","מבנים שונים לחלוטין"],["related","חייב להיות ביניהן Foreign Key"],["grouped","כל אחת חייבת להיות aggregate"]],ans:"same",why:"Set operation דורשת תוצאות תואמות במבנה כדי להניח rows זו מתחת לזו."},
+ {q:"מה ה-output Grain לאחר האיחוד?",opts:[["route","route"],["condition","תנאי"],["depot","depot"],["pair","צמד רשימות"]],ans:"route",why:"כל row עדיין מייצגת route שנכנסה ל-queue."},
+ {q:"מה צריך לקרות ל-route שעומדת בשני התנאים?",opts:[["once","להופיע פעם אחת"],["twice","להופיע פעמיים"],["drop","להיעלם"],["null","להופיע עם NULL"]],ans:"once",why:"הבקשה דורשת queue ללא duplicates."}
+],takeaway:"Set operation מחברת rows אנכית; היא אינה מצרפת attributes לפי קשר. הבחירה בין Union ל-Union All קובעת אם duplicate rows נשמרות.",operation:{mode:"guided",tool:"Set Union → UNION",need:"צריך להניח שתי רשימות route_code זו מתחת לזו ולהסיר חפיפה.",q:"איזו התנהגות נדרשת?",opts:[["union","איחוד אנכי ללא duplicate rows"],["union-all","איחוד אנכי ששומר duplicates"],["join","הוספת columns לפי match"],["group","איגוד לפי depot"]],ans:"union",why:"זו פעולת Union; ב-SQL UNION גם מסירה duplicate rows.",hint:"האם רוצים להוסיף columns או להוסיף rows?"},plan:"π route_code(σ status='delayed'(routes))\n∪\nπ route_code(σ distance_km≥100(routes))",verify:"Route שעומדת בשני התנאים צריכה להופיע פעם אחת בלבד."},
+9:{eye:"תנאי קיום · שמירת Parent Grain",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["depot","depot"],["route","route"],["delay","status"],["pair","depot–route"]],ans:"depot",why:"ה-shortlist דורש כל depot לכל היותר פעם אחת."},
+ {q:"האם routes צריכה לתרום attributes לפלט?",opts:[["no","לא — רק לענות אם קיימת delayed route"],["yes","כן — להציג כל route"],["sum","כן — לסכם distance"],["stack","כן — להוסיף route rows מתחת"]],ans:"no",why:"אין צורך בפרטי route; relation זו משמשת רק כתנאי כן/לא."},
+ {q:"מה עלול לקרות אם מחברים את כל delayed routes ל-depots?",opts:[["repeat","depot עלולה לחזור פעם לכל matching route"],["same","depot תמיד תופיע פעם אחת"],["vanish","כל depot תיעלם"],["aggregate","SQL יאגד אוטומטית"]],ans:"repeat",why:"Join מחזיר matching rows. כאשר צריך רק קיום, הריבוי אינו חלק מה-output Grain."}
+],takeaway:"כאשר child relation משמשת רק כתנאי קיום, Semijoin שומר על Grain ה-parent ואינו מחזיר את child rows.",operation:{mode:"guided",tool:"Semijoin → EXISTS",need:"צריך לשמור depot אם קיימת לה לפחות delayed route, בלי להחזיר את route rows.",q:"איזו התנהגות רלציונית מתאימה?",opts:[["semi","סנן parents לפי קיום match"],["join","החזר כל matching child row"],["anti","שמור parents ללא match"],["union","אחד שתי רשימות"]],ans:"semi",why:"זו פעולת Semijoin. ב-SQL הדרך הישירה לבטא אותה היא EXISTS.",hint:"האם צריך נתון מה-route, או רק תשובת כן/לא?"},plan:"depots ⋉ depot_id\n(σ status='delayed'(routes))",verify:"כל depot שעומדת בתנאי צריכה להופיע פעם אחת, גם אם יש לה כמה delayed routes."},
+10:{eye:"תנאי היעדר · שמירת Parent Grain",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["shipment","shipment"],["route","route"],["assignment","route–shipment"],["status","status"]],ans:"shipment",why:"מחפשים shipments שטרם שובצו."},
+ {q:"איזו relation מתעדת את עצם השיוך למסלול?",opts:[["bridge","route_shipments"],["routes","routes"],["stops","stops"],["depots","depots"]],ans:"bridge",why:"כל row ב-route_shipments היא relationship בין route ל-shipment."},
+ {q:"איזה shipment צריך להישאר?",opts:[["absent","כזה שאין לו אף match בגשר"],["present","כזה שיש לו לפחות match אחד"],["many","רק כזה שיש לו כמה matches"],["all","כל shipment ללא סינון"]],ans:"absent",why:"הדרישה היא למצוא היעדר של relationship."}
+],takeaway:"Anti-Semijoin מחזיר parent rows שאין להן אף match, בלי לשנות את Grain שלהן.",operation:{mode:"guided",tool:"Anti-Semijoin → NOT EXISTS",need:"צריך לשמור shipment רק אם אין לה assignment ב-route_shipments.",q:"איזו התנהגות מתאימה?",opts:[["anti","סנן parents לפי היעדר match"],["semi","סנן לפי קיום match"],["join","החזר assignments"],["group","סכם assignments"]],ans:"anti",why:"זו פעולת Anti-Semijoin. ב-SQL נבטא אותה באמצעות NOT EXISTS.",hint:"נסחו: החזר shipment שעבורה לא קיימת row בגשר."},plan:"shipments ▷ shipment_id route_shipments",verify:"כל shipment ללא assignment צריכה להופיע פעם אחת; shipments משובצות אינן מופיעות."},
+11:{eye:"Aggregation · שינוי Grain",short:"עצירות לפי route",override:{title:"כמה עצירות דווחו לכל route פעילה?",context:"מנהלת התכנון רוצה לעבור מפירוט stops למדד אחד לכל route שיש לה דיווחי עצירה.",task:"סכמו את מספר ה-stop rows לכל route_id שמופיע ב-stops.",output:"route_id, stop_count · מיון לפי route_id.",starter:"",expected:"SELECT route_id,COUNT(*) AS stop_count FROM stops GROUP BY route_id ORDER BY route_id;",solution:"SELECT route_id,COUNT(*) AS stop_count FROM stops GROUP BY route_id ORDER BY route_id;",hints:["התחילו מ-stops בלבד.","הקבוצה היא route_id.","COUNT(*) סופר את stop rows בכל קבוצה."],principle:"GROUP BY משנה Grain: כמה stop rows מתכנסות ל-row אחת לכל route_id.",altSolutions:[]},questions:[
+ {q:"מה ה-Grain של relation המקור?",opts:[["stop","stop"],["route","route"],["depot","depot"],["day","service_date"]],ans:"stop",why:"כל row ב-stops מייצגת עצירה אחת."},
+ {q:"מה ה-output Grain המבוקש?",opts:[["route","route_id"],["stop","stop"],["city","city"],["count","מספר"]],ans:"route",why:"רוצים מדד אחד לכל route_id."},
+ {q:"מה צריך לקרות לכל ה-stop rows של אותה route?",opts:[["collapse","להתכנס ל-row אחת של route"],["remain","להישאר rows נפרדות"],["join","להתחבר לכל route ברשת"],["union","להתווסף זו מתחת לזו"]],ans:"collapse",why:"Aggregation משנה את היחידה מ-stop ל-route."}
+],takeaway:"Aggregation היא שינוי Grain מכוון: source rows רבות מתכנסות ל-row אחת לכל ערך קבוצה.",operation:{mode:"guided",tool:"Grouping/Aggregation → GROUP BY",need:"צריך ליצור קבוצה לכל route_id ולספור את stop rows בתוכה.",q:"איזו פעולה משנה את Grain מ-stop ל-route?",opts:[["group","קיבוץ rows לפי route_id"],["join","הוספת attributes מ-relation אחרת"],["exists","בדיקת קיום"],["union","איחוד רשימות"]],ans:"group",why:"זו פעולת Grouping/Aggregation; ב-SQL משתמשים ב-GROUP BY.",hint:"כמה source rows צריכות להפוך ל-row אחת?"},plan:"γ route_id; COUNT(*)→stop_count (stops)",verify:"צריכה להיות row אחת לכל route_id שקיימת ב-stops, לא row אחת לכל stop."},
+12:{eye:"COUNT · מה בדיוק נספר",short:"ארבע ספירות",questions:[
+ {q:"לאחר LEFT JOIN, מה COUNT(*) סופר עבור route ללא stops?",opts:[["one","את ה-placeholder row שנשמרה — 1"],["zero","0"],["null","NULL"],["error","שגיאה"]],ans:"one",why:"COUNT(*) סופר rows בתוצאה, כולל row שנוצרה כדי לשמור את ה-route."},
+ {q:"מה COUNT(s.stop_id) סופר?",opts:[["real","רק stop values שאינם NULL"],["all","כל joined row"],["distinct","רק statuses שונים"],["routes","את מספר ה-routes"]],ans:"real",why:"COUNT(column) מתעלם מ-NULL ולכן סופר רק stops אמיתיות."},
+ {q:"מה COUNT(DISTINCT s.arrival_status) מודד?",opts:[["variety","כמה statuses שונים שאינם NULL"],["rows","כמה rows"],["nulls","כמה NULLs"],["routes","כמה routes"]],ans:"variety",why:"DISTINCT מצמצם values חוזרים לפני הספירה, ו-NULL אינו נספר."}
+],takeaway:"לפני שבוחרים COUNT מנסחים במילים מה רוצים לספור: rows, non-NULL values או distinct values.",operation:{mode:"guided",tool:"COUNT לפי משמעות",need:"צריך לחשב ארבע ספירות שונות מאותה קבוצת joined rows.",q:"איך בוחרים את ביטוי הספירה?",opts:[["meaning","לפי משמעות המדד ויחסו ל-NULL"],["always-star","תמיד COUNT(*)"],["always-distinct","תמיד DISTINCT"],["row-count","לפי מספר ה-columns"]],ans:"meaning",why:"לכל COUNT משמעות אחרת; אין נוסחה אחת שמתאימה לכל מדד.",hint:"כתבו משפט: מהו הדבר שכל ספירה אמורה לספור?"},plan:"routes ⟕ stops\nγ route; COUNT(*), COUNT(stop_id), COUNT(arrived_at), COUNT(DISTINCT arrival_status)",verify:"ב-route ללא stops, joined_rows יכול להיות 1 אך stop_count חייב להיות 0."},
+13:{eye:"סינון Aggregate · אחרי הקיבוץ",questions:[
+ {q:"באיזה Grain מחושב total_km?",opts:[["depot","depot"],["route","route"],["day","service_date"],["region","region"]],ans:"depot",why:"מסכמים כמה routes של אותו depot למדד אחד."},
+ {q:"מתי אפשר לבדוק total_km ≥ 200?",opts:[["after","אחרי שה-routes קובצו וחושב הסכום"],["before","על כל route לפני הקיבוץ"],["schema","מהסכמה בלבד"],["join","רק לפני Join"]],ans:"after",why:"הערך total_km אינו קיים ב-source rows; הוא נוצר רק אחרי aggregation."}
+],takeaway:"תנאי על source row ותנאי על aggregate פועלים בשלבים שונים של התוכנית הרלציונית.",operation:{mode:"guided",tool:"Selection after aggregation → HAVING",need:"צריך לסנן groups לפי SUM(distance_km) שחושב לכל depot.",q:"איפה ממקמים את הסף?",opts:[["after-group","בסינון שאחרי ה-aggregation"],["before-group","בסינון כל route בנפרד"],["join","בתנאי ה-Join"],["order","ב-ORDER BY"]],ans:"after-group",why:"ב-SQL תנאי על aggregate נכתב ב-HAVING.",hint:"האם total_km קיים לפני GROUP BY?"},plan:"σ total_km≥200\n(γ depot_id; SUM(distance_km)→total_km (routes))",verify:"הסף צריך לחול על הסכום של depot, לא על distance_km של route בודדת."},
+14:{eye:"Aggregation יומית · Grain חדש",questions:[
+ {q:"מהו המעבר ב-Grain?",opts:[["route-day","מ-route ל-service_date"],["day-route","מ-service_date ל-route"],["route-depot","מ-route ל-depot"],["same","ה-Grain אינו משתנה"]],ans:"route-day",why:"כמה route rows מאותו יום מתכנסות ל-row יומית אחת."},
+ {q:"איך סופרים רק completed routes בתוך כל יום בלי למחוק routes אחרות מהמדדים?",opts:[["conditional","מדד מותנה בתוך כל group"],["where","WHERE status='completed' לכל השאילתה"],["distinct","DISTINCT service_date"],["join","JOIN נוסף"]],ans:"conditional",why:"WHERE היה מסיר routes שאינן completed גם מ-route_count ומ-total_km; מדד מותנה סופר רק את הדרוש."}
+],takeaway:"Conditional aggregation מחשבת מדד על subset בתוך group בלי לשנות את שאר ה-input rows של הקבוצה.",operation:{mode:"guided",tool:"Conditional aggregation",need:"צריך לחשב כמה מדדים יומיים, ורק אחד מהם מוגבל ל-status completed.",q:"איזו תוכנית שומרת את כל routes במדדי היום?",opts:[["case","GROUP BY day עם CASE בתוך המדד המותנה"],["where","סינון completed לפני כל המדדים"],["exists","EXISTS לכל יום"],["union","UNION בין ימים"]],ans:"case",why:"CASE קובע אילו rows תורמות למדד completed_routes, בעוד שיתר המדדים רואים את כל הקבוצה.",hint:"איזה מדד בלבד תלוי ב-status?"},plan:"γ service_date; COUNT(*)→route_count, SUM(distance_km)→total_km,\nSUM(status='completed')→completed_routes (routes)",verify:"כל service_date צריכה להופיע פעם אחת; route_count ו-total_km כוללים גם routes שאינן completed."},
+15:{eye:"Bridge Relation · Relationship כ-Row",questions:[
+ {q:"מה מייצגת row אחת ב-route_shipments?",opts:[["assignment","שיוך אחד בין route ל-shipment"],["route","route"],["shipment","shipment"],["depot","depot"]],ans:"assignment",why:"המפתח המורכב מזהה relationship אחת בין שתי הישויות."},
+ {q:"מה ה-cardinality הכולל בין routes ל-shipments?",opts:[["many-many","M:M"],["one-many","1:M בלבד"],["one-one","1:1"],["zero-one","1:0..1"]],ans:"many-many",why:"Route יכולה לשאת כמה shipments, ו-shipment יכולה לעבור בכמה routes."},
+ {q:"מה ה-output Grain המבוקש בדוח?",opts:[["shipment","shipment"],["assignment","assignment"],["route","route"],["depot","depot"]],ans:"shipment",why:"מסכמים את relationships בחזרה ל-row אחת לכל shipment."}
+],takeaway:"Bridge relation הופכת כל relationship ל-row. כדי לחזור ל-Grain של entity, מאגדים את rows של הגשר.",operation:{mode:"guided",tool:"Left Join to bridge + Grouping",need:"צריך לשמור כל shipment ולספור את assignment rows שלה.",q:"איזו תוכנית מתאימה?",opts:[["left-group","Left Join לגשר ואז grouping לפי shipment"],["inner","Inner Join בלבד"],["exists","בדיקת קיום בלבד"],["union","Union עם routes"]],ans:"left-group",why:"Left Join שומר shipment ללא assignment; Grouping מחזיר row אחת לכל shipment.",hint:"מי חייב להישאר גם עם אפס relationships?"},plan:"γ shipment; COUNT(route_id)→route_count\n(shipments ⟕ shipment_id route_shipments)",verify:"Shipment שמופיעה פעמיים בגשר תקבל route_count=2; shipment ללא row בגשר תקבל 0."},
+16:{eye:"חישוב בתוך קבוצה · בלי לצמצם Rows",short:"דירוג בתוך depot",questions:[
+ {q:"מה ה-output Grain לאחר הוספת דירוג?",opts:[["route","route"],["depot","depot"],["rank","rank"],["day","service_date"]],ans:"route",why:"כל route נשארת row נפרדת ומקבלת attribute מחושב."},
+ {q:"מה ההבדל המרכזי מ-GROUP BY?",opts:[["keep","הקבוצה משפיעה על החישוב אך ה-rows אינן מתכנסות"],["collapse","כל depot הופך ל-row אחת"],["filter","רק route אחת נשארת"],["join","נוצרת relation חדשה לכל depot"]],ans:"keep",why:"Window calculation רואה קבוצה אבל מחזיר value לכל source row."}
+],takeaway:"Window Function מחשבת ביחס לקבוצה בלי לשנות את Grain של התוצאה.",operation:{mode:"guided",tool:"Window calculation → ROW_NUMBER() OVER",need:"צריך לתת לכל route מיקום בתוך ה-depot שלה ועדיין להחזיר את כולן.",q:"איזו התנהגות נדרשת?",opts:[["window","חישוב לכל row בתוך partition"],["group","צמצום ל-row אחת לכל depot"],["exists","בדיקת קיום"],["union","איחוד רשימות"]],ans:"window",why:"ROW_NUMBER() OVER מחזירה ערך לכל row; PARTITION BY מגדיר קבוצה ו-ORDER BY את הסדר.",hint:"האם רוצים לשמור כל route או לקרוס ל-row אחת לכל depot?"},plan:"ω ROW_NUMBER() OVER(PARTITION BY depot_id ORDER BY distance_km DESC)\n(routes ⋈ depots)",verify:"כל route נשארת row נפרדת; הדירוג מתחיל מחדש בכל depot."},
+17:{eye:"שני ענפי 1:M · מניעת Fan-out",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["depot","depot"],["driver","driver"],["route","route"],["pair","driver–route"]],ans:"depot",why:"ה-report דורש row אחת לכל depot."},
+ {q:"אם ל-depot יש 3 drivers ו-3 routes ומחברים את שני הענפים הגולמיים, כמה combinations מתקבלים?",opts:[["nine","9"],["six","6"],["three","3"],["one","1"]],ans:"nine",why:"כל driver יכולה להיפגש עם כל route: 3×3 combinations."},
+ {q:"באיזה Grain צריך להכין כל ענף לפני החיבור?",opts:[["depot","row אחת לכל depot"],["child","row אחת לכל child"],["pair","row אחת לכל driver–route"],["network","row אחת לכל הרשת"]],ans:"depot",why:"כאשר שני הענפים מגיעים ל-Grain המשותף לפני ה-Join, הם אינם מכפילים זה את זה."}
+],takeaway:"Fan-out הוא בעיית Grain לפני שהוא בעיית COUNT. הפתרון הכללי הוא pre-aggregation של כל ענף ל-Grain החיבור.",operation:{mode:"guided",tool:"Pre-aggregation before Join",need:"צריך לחשב metrics משני child branches בלי ליצור driver×route combinations.",q:"איזו תוכנית שומרת את המדדים?",opts:[["preagg","סכם כל ענף ל-depot ורק אז חבר"],["raw","חבר הכול גולמית ואז COUNT(*)"],["distinct","תקן כל מדד עם DISTINCT"],["union","אחד drivers ו-routes אנכית"]],ans:"preagg",why:"שני inputs עם row אחת לכל depot מתחברים 1:1 ברמת המדדים.",hint:"אל תחברו שני צדדי M לפני שהגעתם ל-Grain משותף."},plan:"depots\n⟕ γ depot_id; COUNT(*)→driver_count (drivers)\n⟕ γ depot_id; COUNT(*), SUM(distance_km) (routes)",verify:"המדדים של Riverbend צריכים להישאר 3 drivers, 3 routes ו-235 km — לא 9 ו-705."},
+18:{eye:"Capstone · תפקיד כל Relation",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["depot","depot"],["route","route"],["stop","stop"],["day","service_date"]],ans:"depot",why:"ה-shortlist והמדד הסופי הם ברמת depot."},
+ {q:"איזו relation תורמת את values שמסכמים?",opts:[["stops","stops.delivered_packages"],["routes","routes.status"],["depots","depots.region"],["drivers","drivers"]],ans:"stops",why:"זהו המספר שנכנס ל-SUM; status משמש לתנאי קיום או היעדר."}
+],takeaway:"בבעיה מורכבת מסמנים לכל relation תפקיד: base Grain, מקור values, תנאי קיום או תנאי היעדר.",operation:{mode:"guided",tool:"Role-based relational plan",need:"צריך לשלב מדד, תנאי קיום, תנאי היעדר וסף aggregate בלי לערבב ביניהם.",q:"איזו חלוקת תפקידים נכונה?",opts:[["roles","Join ל-values, Semijoin/Anti-Semijoin לתנאים, Grouping למדד"],["join-all","Join לכל דבר ואז DISTINCT"],["exists-all","EXISTS לכל דבר"],["group-only","Grouping בלבד"]],ans:"roles",why:"כל relation משתתפת לפי התפקיד שלה, וכך נשמר Grain ה-depot.",hint:"כתבו ליד כל דרישה: value, קיום, היעדר או סף."},plan:"depot Grain\nJoin routes→stops למדד המסירות\nSemijoin delayed routes · Anti-Semijoin cancelled routes\nGrouping לפי depot · Selection על SUM",verify:"כל depot צריכה להופיע פעם אחת ורק אם כל שלושת התנאים מתקיימים."},
+19:{eye:"מבחן קבלה · תכנון עצמאי",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["route","route"],["stop","stop"],["depot","depot"],["gap","פער"]],ans:"route",why:"כל row בדוח צריכה לתאר route אחת והפער שלה."},
+ {q:"מה צריך לקרות ל-route ללא stops?",opts:[["keep","להישאר עם ביצוע 0"],["drop","להיעלם"],["null","להישאר בלי אפשרות לחשב"],["duplicate","להופיע פעמיים"]],ans:"keep",why:"אין דיווח ביצוע הוא עצמו מידע רלוונטי ל-reconciliation."},
+ {q:"מתי מסננים routes שבהן actual < planned?",opts:[["after","אחרי חישוב שני המדדים ברמת route"],["before","על כל stop בנפרד"],["schema","לפני קריאת הנתונים"],["join","בתנאי הקשר"]],ans:"after",why:"הפער קיים רק לאחר aggregation ברמת route."}
+],takeaway:"Reconciliation דורש קודם ליצור שורת אמת אחת לכל יחידת השוואה, ורק אחר כך לחשב ולסנן פערים.",operation:{mode:"guided",tool:"Preserve → Aggregate → Compare",need:"צריך לשמור routes חסרות ביצוע, לסכם stops ל-route, ואז להשוות planned מול actual.",q:"מהו סדר הפעולות הנכון?",opts:[["sequence","Left Join, Grouping ל-route, ואז סינון הפער"],["filter-first","סינון stops לפני שמירת routes"],["inner","Inner Join בלבד"],["distinct","Distinct על כל ה-rows"]],ans:"sequence",why:"הסדר מונע אובדן routes ומבטיח שההשוואה נעשית באותו Grain.",hint:"קודם בנו row אחת לכל route עם שני המדדים."},plan:"routes ⟕ stops\nγ route; SUM(planned), SUM(COALESCE(delivered,0))\nσ actual < planned",verify:"Route ללא stops חייבת להישאר עם actual=0; הסינון חל רק אחרי חישוב הפער."},
+20:{eye:"Transfer · מעבר בין שתי רמות Grain",short:"דוח לפי region",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["region","region"],["depot","depot"],["route","route"],["vehicle","vehicle"]],ans:"region",why:"ה-report דורש row אחת לכל region."},
+ {q:"איזה Grain ביניים מונע ספירת depot כמה פעמים בגלל routes?",opts:[["depot","depot"],["route","route"],["region","region מיד"],["day","service_date"]],ans:"depot",why:"מסכמים routes ל-row אחת לכל depot, ורק אחר כך עולים ל-region."}
+],takeaway:"כשדוח עובר כמה רמות, בונים שכבות Grain מפורשות במקום לקפוץ ישירות מה-source ל-output.",operation:{mode:"guided",tool:"Layered aggregation",need:"צריך לעבור מ-route ל-depot ואז מ-depot ל-region.",q:"איזו תוכנית מתאימה?",opts:[["layers","Aggregation ל-depot, Join, ואז Aggregation ל-region"],["raw","Raw Join וספירת כל row כ-depot"],["exists","EXISTS בלבד"],["union","UNION בין regions"]],ans:"layers",why:"בכל שכבה ברור מה row אחת מייצגת ולכן depot_count אינו מתנפח.",hint:"כתבו את ה-Grain אחרי כל שלב."},plan:"γ depot_id; route metrics (routes)\n→ depots ⟕ route metrics\n→ γ region; depot_count + route metrics",verify:"כל region צריכה להופיע פעם אחת, כולל region שבו ל-depot אין routes."},
+21:{eye:"Transfer · 1:M לצד 1:0..1",short:"דוח לפי vehicle type",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["type","vehicle_type"],["vehicle","vehicle"],["route","route"],["tracker","tracker"]],ans:"type",why:"ההשוואה הסופית היא row אחת לכל vehicle_type."},
+ {q:"באיזה Grain צריך להכין route metrics לפני חיבור trackers?",opts:[["vehicle","vehicle"],["route","route"],["type","vehicle_type מיד"],["depot","depot"]],ans:"vehicle",why:"routes היא 1:M מ-vehicle, בעוד tracker היא 1:0..1; vehicle הוא Grain ביניים יציב."},
+ {q:"מה UNIQUE על vehicle_trackers.vehicle_id מבטיח?",opts:[["at-most","לכל vehicle לכל היותר tracker אחת"],["exact","לכל vehicle בדיוק tracker אחת"],["many","לכל vehicle כמה trackers"],["route","tracker אחת לכל route"]],ans:"at-most",why:"UNIQUE מגביל ריבוי אך אינו מבטיח שקיימת row."}
+],takeaway:"אילוץ UNIQUE עוזר לקבוע match multiplicity, אך קיום והתאמה יחידה הן שתי שאלות שונות.",operation:{mode:"guided",tool:"Pre-aggregation at vehicle Grain",need:"צריך לשמור vehicle פעם אחת בזמן שמצרפים branch של routes ו-branch אופציונלי של tracker.",q:"איזו תוכנית מתאימה?",opts:[["vehicle","סכם routes ל-vehicle, חבר tracker, ואז קבץ לפי type"],["raw","חבר raw routes וספור vehicles עם COUNT(*)"],["cross","CROSS JOIN"],["union","UNION"]],ans:"vehicle",why:"כך כל vehicle תורמת row אחת לשלב הסיכום לפי type.",hint:"מצא את ה-Grain שבו שני הענפים הם לכל היותר row אחת."},plan:"γ vehicle_id; route metrics (routes)\n→ vehicles ⟕ route metrics ⟕ vehicle_trackers\n→ γ vehicle_type",verify:"vehicle_count ו-tracked_vehicle_count אינם אמורים לגדול בגלל מספר routes שונה לכל vehicle."},
+22:{eye:"Transfer · קריאת Schema זר",questions:[
+ {q:"מה ה-output Grain המבוקש?",opts:[["customer","customer"],["order","order"],["refund","refund"],["segment","segment"]],ans:"customer",why:"הפלט מחזיר customer עם revenue מצטבר."},
+ {q:"מה תפקיד orders ומה תפקיד refunds?",opts:[["roles","orders תורמת values; refunds בודקת היעדר"],["reverse","refunds תורמת revenue; orders רק תנאי"],["both-values","שתיהן תורמות amount"],["unrelated","אין קשר ביניהן"]],ans:"roles",why:"amount נמצא ב-orders; קיום refund פוסל order ואינו מוסיף value למדד."},
+ {q:"מה משמעות UNIQUE על refunds.order_id?",opts:[["zero-one","ל-order יכולה להיות אפס או refund אחת"],["exact-one","לכל order יש refund אחת"],["many","ל-order יכולות להיות כמה refunds"],["many-many","M:M"]],ans:"zero-one",why:"UNIQUE מונע יותר מ-refund אחת, אך אינו מחייב match."}
+],takeaway:"בסכמה זרה מתחילים מ-PK/FK/UNIQUE, מגדירים Grain ותפקידי relations, ורק אז בוחרים תחביר.",operation:{mode:"guided",tool:"Join + Anti-Semijoin + Aggregation",need:"צריך להביא order amounts ל-customer, להוציא orders עם refund, ואז לסכם ולסנן customers.",q:"איזו תוכנית רלציונית מתאימה?",opts:[["roles","Join customers–orders, Anti-Semijoin refunds, Grouping customer"],["join-only","Join של שלוש relations בלבד"],["exists","Semijoin בלבד"],["distinct","Distinct ללא aggregation"]],ans:"roles",why:"כל relation מקבלת תפקיד לפי הבקשה ולא לפי שם כלי מוכתב.",hint:"מי מספק value ומי רק פוסל row?"},plan:"customers ⋈ completed orders\n▷ refunded orders\nγ customer; SUM(amount)\nσ revenue≥500",verify:"Order שיש לה refund אינה תורמת כלל ל-revenue; כל customer מופיעה לכל היותר פעם אחת."}
+};
+
+Object.keys(LEARNING_FLOW).forEach(key=>{
+ const i=Number(key),flow=LEARNING_FLOW[i],stage=STAGES[i];
+ if(flow.override)Object.assign(stage,flow.override);
+ stage.eye=flow.eye;
+ if(flow.short)stage.short=flow.short;
+ stage.pred="עברו על מסלול החשיבה לפי הסדר. כל תשובה פותחת את הצעד הבא.";
+ stage.predQuiz=flow.questions;
+ stage.lesson=flow.takeaway;
+ stage.operation=flow.operation;
+ stage.relationalPlan=flow.plan;
+ stage.verify=flow.verify;
+ stage.sanity=null;
+ stage.requireNote=false;
+});
+
+STAGES[16].windowStage=false;
+Object.assign(STAGES[23],{
+ context:"אין שאילתה חדשה. בכל בעיה עוברים באותו מסלול: Grain מבוקש, relation שכבר נמצאת בו, תפקיד כל relation נוספת, מספר matches והשפעת הפעולה על ה-Grain. רק לאחר שהתוכנית הרלציונית ברורה מתרגמים ל-SQL.",
+ task:"עברו על מסגרת ההחלטה ובדקו שאתם בוחרים פעולה לפי תפקיד relation והשפעתה על ה-Grain — לא לפי מילת SQL שזכרתם.",
+ note:"המסגרת מסכמת את דרך החשיבה שחזרה לאורך הקורס."
+});
+
+Object.assign(STAGES[0],{
+ title:"מה רשומה אחת מייצגת?",
+ short:"פתיחה · Grain",
+ eye:"פתיחה · בעיה לפני הגדרה",
+ context:"אנליסטית סימנה שתי rows ככפולות מפני שמופיע בהן אותו depot_name. אבל לכל row יש route_code אחר.",
+ task:"החליטו אם אלה באמת duplicate rows. התחילו מהשאלה: מה row אחת מייצגת?",
+ note:"ההגדרה תגיע רק אחרי שתפתרו את הבעיה הקטנה.",
+ predQuiz:[
+  {q:"מה מייצגת כל row בדוגמה?",opts:[["route","route"],["depot","depot"],["region","region"],["status","status"]],ans:"route",why:"route_code שונה בכל row, ולכן כל row מתארת route אחרת."},
+  {q:"האם חזרת depot_name הופכת את שתי ה-rows ל-duplicates?",opts:[["no","לא — ה-routes שונות"],["yes","כן — כל value חוזר הוא duplicate"],["maybe","רק לפי סדר ה-rows"],["null","רק אם status הוא NULL"]],ans:"no",why:"Duplicate נבחן לפי ה-row כולה ולפי היחידה שהיא מייצגת, לא לפי attribute אחד שחוזר."}
+ ],
+ principle:"לפני כל פעולה קובעים מה row אחת מייצגת — זהו ה-Grain."
+});
+
+function introHtml(s){
  return '<div class="intro-map">'+
-   '<div class="intro-hierarchy">Database → Relation (טבלה)<br>↳ Attribute (עמודה) · Tuple (שורה) · Value (ערך)</div>'+
-   '<div class="intro-terms">'+
-    '<div class="intro-term"><b>Schema</b> = המבנה.</div>'+
-    '<div class="intro-term"><b>Instance</b> = הנתונים ברגע נתון.</div>'+
-    '<div class="intro-term"><b>Domain</b> = הערכים המותרים ל-attribute.</div>'+
-    '<div class="intro-term"><b>Grain</b> = מה מייצגת שורה אחת.</div>'+
-   '</div>'+
-   '<div class="relation-compare">'+
-    '<div class="relation-visual"><h4>Relation כקבוצה של tuples</h4><div class="set-box"><pre>depots = {\n  (1, Northgate Hub, North),\n  (2, Riverbend Crossdock, Central),\n  (3, Coastline Depot, West)\n}</pre></div><div class="visual-caption">הסוגריים המסולסלים מדגישים: זו <b>קבוצה</b>. אין משמעות לסדר, ואין tuple כפול.</div></div>'+
-    '<div class="visual-eq">↔</div>'+
-    '<div class="relation-visual"><h4>אותו מידע בתצוגה טבלאית</h4><table class="mini-rel-table"><thead><tr><th>depot_id</th><th>depot_name</th><th>region</th></tr></thead><tbody><tr><td>1</td><td>Northgate Hub</td><td>North</td></tr><tr><td>2</td><td>Riverbend Crossdock</td><td>Central</td></tr><tr><td>3</td><td>Coastline Depot</td><td>West</td></tr></tbody></table><div class="visual-caption">הטבלה היא דרך נוחה <b>להציג</b> relation. המיקום של row על המסך אינו חלק מהמשמעות התאורטית שלה.</div></div>'+
-   '</div>'+
-   '<div class="intro-note"><b>Relation אינה פשוט "טבלה".</b> Relation היא המקבילה התאורטית לטבלה במודל הרלציוני. היא קבוצה של tuples, ולכן אין בה tuple כפול ואין משמעות לסדר. תוצאת SQL יכולה להכיל שורות כפולות, וסדר מובטח רק כשמבקשים אותו במפורש.</div>'+
+   '<div class="relation-visual"><h4>שתי rows שנראות דומות</h4><table class="mini-rel-table"><thead><tr><th>route_code</th><th>depot_name</th><th>status</th></tr></thead><tbody><tr><td>NG-0820-A</td><td>Northgate Hub</td><td>completed</td></tr><tr><td>NG-0821-A</td><td>Northgate Hub</td><td>delayed</td></tr></tbody></table></div>'+
+   predictionQuizHtml(s)+
+   (reasoningComplete(s)?'<div class="intro-note"><b>עכשיו אפשר לתת לזה שם:</b> Grain הוא מה ש-row אחת מייצגת. Relation היא קבוצה של tuples; חזרה של attribute אחד אינה בהכרח duplicate tuple. Schema הוא המבנה, Instance הוא הנתונים ברגע מסוים, ו-Domain הוא אוסף הערכים המותרים ל-attribute.</div>':'')+
   '</div>';
 }
 
@@ -1009,9 +1157,18 @@ function predQuestionChecked(stage,qi){
  if(v===true)return true; // compatibility with v12, where the whole quiz was checked at once
  return !!(v&&typeof v==='object'&&v[qi]);
 }
+function predQuestionCorrect(stage,qi,s){
+ const answers=(state.predAnswers||{})[stage]||{};
+ return predQuestionChecked(stage,qi)&&answers[qi]===s.predQuiz[qi].ans;
+}
+function reasoningComplete(s){
+ if(!s.predQuiz||!s.predQuiz.length)return true;
+ return s.predQuiz.every((_,qi)=>predQuestionCorrect(state.stage,qi,s));
+}
 function predictionQuizHtml(s){
  const byStage=(state.predAnswers||{})[state.stage]||{};
  const qs=s.predQuiz.map((q,qi)=>{
+   if(qi>0&&!predQuestionCorrect(state.stage,qi-1,s))return'';
    const cur=byStage[qi]||'';
    const checked=predQuestionChecked(state.stage,qi);
    const exp=(checked&&cur)?('<div class="answer-exp '+(cur===q.ans?'good':'wrong')+'"><b>'+(cur===q.ans?'נכון. ':'עוד לא. ')+'</b>'+esc(q.why)+'</div>'):'';
@@ -1021,16 +1178,9 @@ function predictionQuizHtml(s){
 }
 function relationalModelHtml(s){
  if(s.intro||s.summary)return'';
- let quiz='';
- if(s.predQuiz)quiz=predictionQuizHtml(s);
- else if(s.pred&&s.requireNote)quiz='<div class="model-prompt">'+formatStageTerms(s.pred,new Set())+'</div><textarea id="note" class="prediction-answer" placeholder="כתבו כאן תחזית או הסבר קצר לפני בדיקת השאילתה.">'+esc(state.notes[state.stage]||'')+'</textarea><small class="prediction-help">נשמר אוטומטית · נדרש לפני בדיקת השאילתה</small>';
- else if(s.pred)quiz='<div class="model-prompt">'+formatStageTerms(s.pred,new Set())+'</div>';
- const noteStarted=!!String((state.notes||{})[state.stage]||'').trim();
- const attemptedPred=s.predQuiz?s.predQuiz.every((_,qi)=>predQuestionChecked(state.stage,qi)):(s.requireNote?noteStarted:true);
- const model=(s.operation&&s.operation.model)?'<div class="model-summary"><b>איך הנתונים בנויים:</b> '+esc(s.operation.model)+'</div>':'';
- const lesson=s.lesson?'<div class="model-lesson"><b>עיקרון רלציוני:</b> '+esc(s.lesson)+'</div>':'';
- const followup=(model||lesson)?'<div id="predictionFollowup" class="prediction-followup '+(attemptedPred?'':'is-hidden')+'">'+model+lesson+'</div>':'';
- return '<section class="card relational-card"><div class="relational-title">המודל הרלציוני</div>'+quiz+followup+'</section>';
+ const quiz=s.predQuiz?predictionQuizHtml(s):'';
+ const summary=(reasoningComplete(s)&&s.lesson)?'<div class="learning-summary"><b>מה קבענו:</b> '+esc(s.lesson)+'</div>':'';
+ return '<section class="card relational-card"><div class="relational-title">פירוק הבעיה לפני SQL</div><p class="relational-intro">ענו על שאלה אחת בכל פעם. המטרה היא להבין את מבנה התוצאה לפני שבוחרים תחביר.</p>'+quiz+summary+'</section>';
 }
 
 function foreignSchemaHtml(s){
@@ -1095,9 +1245,8 @@ function operationChoiceResolved(s){
 }
 
 function operationHtml(s){
- if(s.intro||s.summary||!s.operation)return'';
+ if(s.intro||s.summary||!s.operation||!reasoningComplete(s))return'';
  const op=s.operation;
- const open=!!(state.operationOpen||{})[state.stage];
  const cur=(state.operationAnswers||{})[state.stage]||'';
  const checked=!!(state.operationChecked||{})[state.stage];
  const hintOpen=!!(state.operationHints||{})[state.stage];
@@ -1113,11 +1262,15 @@ function operationHtml(s){
    if(op.reminder)body+='<div class="op-reminder">'+esc(op.reminder)+'</div>';
    body+='<p><b>'+esc(op.q)+'</b></p><div class="op-quiz"><select id="operationAnswer"><option value="">בחרו...</option>'+op.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select><button class="op-check" id="checkOperation">בדוק</button><button class="op-hint-btn" id="operationHint">רמז</button></div>';
    if(checked&&!cur)body+='<div class="op-feedback bad">בחרו פעולה לפני הבדיקה.</div>';
-   else if(checked&&cur===op.ans)body+='<div class="op-feedback good"><b>נכון — '+esc(op.tool)+'.</b></div><details class="op-details"><summary>למה זה מתאים?</summary><div class="op-why">'+esc(op.why)+'</div></details>';
+   else if(checked&&cur===op.ans)body+='<div class="op-feedback good"><b>נכון — '+esc(op.tool)+'.</b><div class="op-why">'+esc(op.why)+'</div></div>'+(s.relationalPlan?'<div><div class="operation-title" style="margin-top:12px">התוכנית הרלציונית</div><pre class="relational-plan">'+esc(s.relationalPlan)+'</pre></div>':'');
    else if(checked)body+='<div class="op-feedback bad"><b>עוד לא.</b> חזרו ל-Grain ולתפקיד של כל relation.</div>';
    if(hintOpen&&op.hint)body+='<div class="op-hint">'+esc(op.hint)+'</div>';
  }
- return '<details class="card operation-card operation-help" id="operationHelp" '+(open?'open':'')+'><summary>לא בטוח איזו פעולה מתאימה?</summary><div class="operation-help-inner">'+body+'</div></details>';
+ return '<section class="card operation-card"><div class="operation-title">בחירת הפעולה הרלציונית</div>'+body+'</section>';
+}
+
+function sqlReady(s){
+ return reasoningComplete(s)&&operationChoiceResolved(s)&&scaffoldComplete(s);
 }
 
 function sanityHtml(s,after){
@@ -1184,15 +1337,15 @@ function render(){
  scratchHtml(s)+
  operationHtml(s)+
  joinVizDisclosureHtml(s)+
- sanityHtml(s,false)+
  scaffoldHtml(s)+
  scaffoldGateHtml(s)+
- ((s.summary||s.intro||!scaffoldComplete(s))?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button></div></div></section>')+
+ ((s.summary||s.intro||sqlReady(s))?'':('<section class="card flow-gate"><b>ה-SQL עדיין סגור.</b><span>'+(reasoningComplete(s)?'בחרו קודם את הפעולה הרלציונית.':'השלימו קודם את פירוק הבעיה שמעל.')+'</span></section>'))+
+ ((s.summary||s.intro||!sqlReady(s))?'':'<section class="editor"><div class="editorhead"><b>SQL editor · עכשיו מתרגמים את התוכנית</b><span>'+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="תרגמו את התוכנית הרלציונית ל-SQL...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button></div></div></section>')+
  skeletonHtml(s)+
- ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?sqlErrorHtml(lastError):resultHtml(lastResult))+(lastResult&&s.sanity?'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>':'')+'</section>':'')+
+ ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?sqlErrorHtml(lastError):resultHtml(lastResult))+(lastResult&&(s.verify||(s.sanity&&s.sanity.after))?'<div class="result-verify"><b>בדיקת מבנה:</b> '+mixedInlineHtml(s.verify||(s.sanity&&s.sanity.after))+'</div>':'')+'</section>':'')+
  (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')||queryFeedback.startsWith('התוצאה נכונה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
  (queryFeedback&&s.fanoutTrap?fanoutLessonHtml(state.sql[state.stage]||''):'')+
- ((s.intro||s.mapping||s.summary)?('<section class="card reason"><label>'+(s.intro?'מפת המונחים':s.mapping?'תשובה מובנית':'סיכום · מסגרת החלטה')+'</label><small>'+noteText+'</small>'+(s.intro?introHtml():s.mapping?structuredHtml():decisionHtml())+'<div class="actions">'+(s.intro?'<button class="check" id="checkIntro">הבנתי, אפשר להמשיך</button>':s.mapping?'<button class="check" id="check">בדוק תשובה</button>':'<button class="check" id="checkDecision">בדוק תשובות</button>')+(s.intro?'':'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button>')+'</div>'+(state.hint[state.stage]!==undefined&&!s.intro?'<div class="hintbox">'+hintText+'</div>':'')+(feedback?'<div class="feedback '+(feedback.startsWith('נכון')||feedback.startsWith('מצוין')||feedback.startsWith('מעולה')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+(state.solution[state.stage]&&!s.intro?'<div class="solutionbox"><b>פתרון מוצע</b><p>'+esc(s.solution)+'</p><p><b>עיקרון:</b> '+principleText+'</p></div>':'')+'</section>'):sqlSupportHtml(s,hintText,principleText))+
+ ((s.intro||s.mapping||s.summary)?('<section class="card reason"><label>'+(s.intro?'הבעיה הראשונה':s.mapping?'תשובה מובנית':'סיכום · מסגרת החלטה')+'</label><small>'+noteText+'</small>'+(s.intro?introHtml(s):s.mapping?structuredHtml():decisionHtml())+'<div class="actions">'+(s.intro?'<button class="check" id="checkIntro" '+(reasoningComplete(s)?'':'disabled')+'>סיום הפתיחה</button>':s.mapping?'<button class="check" id="check">בדוק תשובה</button>':'<button class="check" id="checkDecision">בדוק תשובות</button>')+(s.intro?'':'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button>')+'</div>'+(state.hint[state.stage]!==undefined&&!s.intro?'<div class="hintbox">'+hintText+'</div>':'')+(feedback?'<div class="feedback '+(feedback.startsWith('נכון')||feedback.startsWith('מצוין')||feedback.startsWith('מעולה')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+(state.solution[state.stage]&&!s.intro?'<div class="solutionbox"><b>פתרון מוצע</b><p>'+esc(s.solution)+'</p><p><b>עיקרון:</b> '+principleText+'</p></div>':'')+'</section>'):sqlSupportHtml(s,hintText,principleText))+
  '<div class="nav"><button id="prev" '+(state.stage===0?'disabled':'')+'>← הקודם</button><button class="next" id="next" '+(!done(state.stage)?'disabled':'')+'>'+(state.stage===STAGES.length-1?'סיום':'הבא ←')+'</button></div>'+
  '</section>'+
  '<aside class="side">'+foreignSideHtml(s)+'<section class="card schema '+(s.foreignSchema?'is-hidden':'')+'"><h3>Schema + Domain</h3><div class="schema-relations">'+Object.keys(TABLES).map(t=>'<span class="relation-chip"><button data-table="'+t+'" class="'+(t===preview?'sel':'')+'">'+t+'</button>'+(canInsert?'<button class="insert-mini" data-insert-token="'+esc(t)+'" title="הוסף relation לעורך">＋</button>':'')+'</span>').join('')+'</div>'+(canInsert?'<div class="insert-help">＋ מוסיף לעורך במקום הסמן · Ctrl+Space פותח autocomplete</div>':'')+(relationGraphUnlocked()?'<button class="relation-toggle" id="toggleRelations">'+(relationGraphOpen()?'הסתר קשרים':'הצג קשרים')+'</button>'+(relationGraphOpen()?schemaGraphHtml():''):'<div class="schema-note relation-lock">קשרי ה-FK מוסתרים עד שתנסו שאילתה או תבקשו רמז.</div>')+'<table class="schema-table"><thead><tr><th>Attribute</th><th class="domain">Domain</th></tr></thead><tbody>'+Object.keys(DOMAINS[preview]).map(a=>'<tr><td class="attr"><div class="attr-cell">'+(canInsert?'<button class="attr-name-insert" data-insert-token="'+esc(a)+'" title="לחץ להוספה לעורך">'+esc(a)+'</button>':'<span>'+esc(a)+'</span>')+(canInsert?'<button class="insert-attr" data-insert-token="'+esc(a)+'" title="הוסף attribute לעורך">＋</button>':'')+'</div></td><td class="domain">'+esc(DOMAINS[preview][a])+'</td></tr>').join('')+'</tbody></table><div class="schema-note"><b>Domain</b> = קבוצת הערכים שה-attribute יכול לקבל.</div><div class="data-preview">'+previewDataHtml(preview,canInsert)+'</div></section>'+
@@ -1383,7 +1536,13 @@ function bind(){
  if(checkQuery)checkQuery.onclick=checkQueryNow;
 
  const checkIntro=document.getElementById('checkIntro');
- if(checkIntro)checkIntro.onclick=()=>{if(!done(state.stage))state.completed.push(state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);feedback='מעולה. אפשר להמשיך לשלב 1.';save();render();};
+ if(checkIntro)checkIntro.onclick=()=>{
+   if(!reasoningComplete(curr())){feedback='השלימו קודם את שתי שאלות ה-Grain.';save();render();return;}
+   if(!done(state.stage))state.completed.push(state.stage);
+   state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);
+   feedback='נכון. עכשיו אפשר להשתמש ב-Grain כדי לפרק בקשות אמיתיות.';
+   save();render();
+ };
 
  const checkAnswer=document.getElementById('check');
  if(checkAnswer)checkAnswer.onclick=()=>{const r=checkStructured();feedback=r.msg;if(r.ok){if(!done(state.stage))state.completed.push(state.stage);state.skipped=(state.skipped||[]).filter(i=>i!==state.stage);}save();render();};
@@ -1426,6 +1585,6 @@ async function init(){
 }
 render();init();
 </script>
-<!-- deploy-marker: business-task-rewrite-2026-08-30 -->
+<!-- deploy-marker: relational-first-course-rewrite-2026-09-04 -->
 </body>
 </html>
