@@ -1,0 +1,40 @@
+name: RouteCraft Stage 1 layout copy
+on:
+  push:
+    branches:
+      - routecraft-stage1-layout-copy
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Stage 1 layout and copy
+        run: python .github/routecraft-stage1-layout-copy.py
+      - name: Validate JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script[^>]*>([\s\S]*?)</script>',s)
+          inline=[x for x in scripts if x.strip()]
+          Path('/tmp/app.js').write_text(inline[-1],encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+      - name: Guard scope
+        run: |
+          git diff --exit-code -- . ':!sql-lab/index.html' ':!.github/routecraft-stage1-layout-copy.py' ':!.github/workflows/routecraft-stage1-layout-copy.yml'
+          git diff --check -- sql-lab/index.html
+      - name: Commit validated app change
+        run: |
+          if git diff --quiet -- sql-lab/index.html; then
+            echo 'No app changes to commit'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sql-lab/index.html
+          git commit -m 'Clarify Stage 1 schema and cardinality flow'
+          git push
