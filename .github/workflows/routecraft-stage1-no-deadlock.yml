@@ -23,15 +23,6 @@ jobs:
           if old not in s:
               raise SystemExit('stage1 guided flow marker not found')
           s=s.replace(old,new,1)
-          old2="""(state.stage===1&&!operationChoiceResolved(s)))?'':'<section class=\"editor\""""
-          if old2 not in s:
-              raise SystemExit('editor gate marker not found')
-          # Keep editor gate exactly as-is. We only remove the misleading SQL-support controls before the operation is resolved.
-          old3="""'):sqlSupportHtml(s,hintText,principleText))+\n '<div class=\"nav\">'"""
-          new3="""'):(state.stage===1&&!operationChoiceResolved(s)?'':sqlSupportHtml(s,hintText,principleText)))+\n '<div class=\"nav\">'"""
-          if old3 not in s:
-              raise SystemExit('sql support marker not found')
-          s=s.replace(old3,new3,1)
           p.write_text(s)
           PY
       - name: Validate JavaScript and Stage 1 guardrails
@@ -43,7 +34,7 @@ jobs:
           b=s.rindex('</script>')
           Path('/tmp/routecraft.js').write_text(s[a:b])
           assert "out+=sanityHtml(s,false);\n   out+=operationHtml(s)+joinVizDisclosureHtml(s);" in s
-          assert "state.stage===1&&!operationChoiceResolved(s)?'':sqlSupportHtml" in s
+          assert "if((state.exploreRan||{})[1]&&stage1SanityResolved(s))" not in s
           assert 'Output Grain = route' in s
           assert 'Cardinality: route → depot = 1' in s
           assert 'Role של depots = הוספת attribute' in s
