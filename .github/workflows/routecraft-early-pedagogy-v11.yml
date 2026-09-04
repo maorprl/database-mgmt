@@ -1,0 +1,97 @@
+name: RouteCraft early pedagogy v11
+on:
+  push:
+    branches:
+      - routecraft-early-pedagogy-v11
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply scoped RouteCraft patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('sql-lab/index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'EARLY_PEDAGOGY_V11' in s:
+              raise SystemExit('already applied')
+          if 'const APP_STATE_VERSION=10;' not in s:
+              raise SystemExit('unexpected app state version')
+          stage_marker='];\n\nfunction introHtml(){'
+          migration_marker=' out.structured=Object.assign({grain:{},card:{}},raw.structured||out.structured||{});'
+          if s.count(stage_marker)!=1 or s.count(migration_marker)!=1:
+              raise SystemExit('source markers do not match inspected main')
+          s=s.replace('const APP_STATE_VERSION=10;','const APP_STATE_VERSION=11;',1)
+          migration=''' if((raw.version||0)<11){
+             const earlyStages=[1,2,3,4,5,6,7];
+             ["predAnswers","predChecked","sanityAnswers","sanityChecked","operationAnswers","operationChecked","operationHints","operationOpen"].forEach(k=>{
+               out[k]=out[k]||{};
+               earlyStages.forEach(i=>{delete out[k][i];});
+             });
+           }\n'''
+          s=s.replace(migration_marker,migration+migration_marker,1)
+          override=r'''// EARLY_PEDAGOGY_V11
+          // Early JOIN stages follow: Grain -> cardinality -> relation role/effect -> operator -> SQL.
+          (function(){
+            const q=(q,opts,ans,why)=>({q,opts,ans,why});
+            const op=(i,x)=>{Object.assign(STAGES[i].operation,x);delete STAGES[i].operation.newTool;};
+            const sanity=(i,x)=>{STAGES[i].sanity=x;};
+
+            STAGES[1].predQuiz.push(q("לכל route, כמה depots לכל היותר יכולים להתאים דרך routes.depot_id?",[["one","depot אחד"],["many","כמה depots"],["zero","אף depot"],["unknown","אי אפשר לדעת מהסכמה"]],"one","routes.depot_id הוא Foreign Key אל depots.depot_id, ולכן route אחת מצביעה על depot אחד."));
+            op(1,{mode:"guided",q:"מה התפקיד של depots במשימה הזאת?",opts:[["attributes","לתרום depot_name ל-row של כל route"],["exists","רק לבדוק אם depot קיים"],["preserve","לשמור depots שאין להם routes"],["aggregate","לאגד routes"]],ans:"attributes",why:"depot_name נדרש בתוך אותה row של route. אחרי שמזהים את התפקיד ואת הקשר דרך depot_id, INNER JOIN הוא החיבור המתאים.",hint:"האם depot_name צריך להופיע בפלט עצמו?"});
+            sanity(1,{q:"ה-Grain הוא route, ולכל route מתאים depot אחד. מה אמור לקרות למספר ה-rows אחרי שמצרפים את פרטי ה-depot?",opts:[["same","להישאר כמו מספר ה-rows ב-routes"],["more","לגדול"],["less","לקטון"],["unknown","אי אפשר לצפות"]],ans:"same",why:"החיבור מוסיף attributes ל-route קיימת ואינו מפצל אותה לכמה matches. ה-Grain נשאר route.",after:"השוו עכשיו ל-SELECT COUNT(*) FROM routes. מספר ה-rows בתוצאה צריך להיות זהה ל-baseline."});
+
+            STAGES[2].predQuiz.splice(1,0,q("לכל driver, כמה depots יכולים להתאים דרך drivers.depot_id?",[["one","depot אחד"],["many","כמה depots"],["zero","אף depot"],["unknown","אי אפשר לדעת"]],"one","drivers.depot_id הוא Foreign Key אל depot אחד. חזרת depot אצל drivers שונים אינה מפצלת driver אחת."));
+            sanity(2,{q:"ה-Grain הוא driver, ולכל driver מתאים depot אחד. מה אמור לקרות למספר ה-rows אחרי שמוסיפים depot_name?",opts:[["same","להישאר כמו מספר ה-rows ב-drivers"],["more","לגדול בגלל ש-depot חוזר"],["less","לקטון בגלל NULL ברישיון"],["unknown","אי אפשר לצפות"]],ans:"same",why:"כל driver מקבלת match אחד בלבד, ו-NULL ב-license_class אינו מוחק את ה-row.",after:"השוו ל-SELECT COUNT(*) FROM drivers. מספר ה-rows צריך להיות זהה; drivers עם license_class = NULL עדיין צריכות להופיע."});
+
+            STAGES[3].predQuiz.push(q("מה אנחנו צריכים לקבל מ-drivers ומ-routes?",[["existence","רק לדעת אם קיימת לפחות row אחת בכל ענף"],["attributes","להציג פרטי driver ו-route"],["metrics","לסכם מדדים משני הענפים"],["pairs","להציג כל driver × route"]],"existence","אף attribute של driver או route אינו נדרש בפלט; שני הענפים משמשים רק כתנאי קיום."));
+            op(3,{mode:"guided",q:"איזה סוג צורך יש לנו מ-drivers ומ-routes?",opts:[["existence","תנאי קיום בלבד, בלי להוסיף child rows לפלט"],["details","פרטים משני הענפים בפלט"],["aggregate","מדדים מסוכמים"],["preserve","לשמור child rows ללא depot"]],ans:"existence",why:"צריך רק לדעת שלכל depot יש לפחות driver ולפחות route. EXISTS בודק קיום בלי לשנות את Grain ה-depot.",hint:"האם driver_name או route_code נדרשים בפלט?"});
+
+            STAGES[4].predQuiz.unshift(q("מה ה-output Grain?",[["route","route"],["vehicle","vehicle"],["depot","depot"],["pair","route × vehicle"]],"route","הבקשה היא עבור כל route; פרטי vehicle מתווספים אליה."));
+            STAGES[4].predQuiz.push(q("לכל route, כמה vehicles יכולים להתאים דרך routes.vehicle_id?",[["one","vehicle אחד"],["many","כמה vehicles"],["zero","אף vehicle"],["unknown","אי אפשר לדעת"]],"one","ערך vehicle_id יחיד ב-route מצביע על vehicle אחת."));
+            op(4,{q:"מה התפקיד של vehicles במשימה?",opts:[["attributes","לתרום plate_no, vehicle_type ו-capacity_kg לכל route"],["exists","רק לבדוק אם vehicle קיימת"],["preserve","לשמור vehicles שאין להן routes"],["aggregate","לאגד routes לפי vehicle"]],ans:"attributes",why:"פרטי vehicle נדרשים בתוך אותה row של route. אחרי שמזהים את התפקיד ואת ה-FK, INNER JOIN הוא החיבור המתאים.",hint:"האם attributes של vehicle צריכים להופיע בפלט?"});
+            sanity(4,{q:"ה-Grain הוא route, ולכל route מתאים vehicle אחד. מה אמור לקרות למספר ה-rows אחרי שמוסיפים את פרטי הרכב?",opts:[["same","להישאר כמו מספר ה-rows ב-routes"],["more","לגדול"],["less","לקטון"],["unknown","אי אפשר לצפות"]],ans:"same",why:"vehicle אחת יכולה לשמש כמה routes, אבל כל route מצביעה על vehicle אחת בלבד. לכן החיבור אינו מפצל route.",after:"השוו ל-SELECT COUNT(*) FROM routes. מספר ה-rows בתוצאה צריך להיות זהה ל-baseline."});
+
+            STAGES[5].predQuiz.unshift(q("איזה relation חייב להישמר גם כשאין לו match?",[["depots","depots"],["routes","routes"],["both","רק rows שיש בשני הצדדים"],["none","אף אחד"]],"depots","הבקשה אומרת שכל depot חייב להופיע גם אם אין לו route."));
+            op(5,{mode:"guided",q:"איזו דרישה קובעת את סוג החיבור כאן?",opts:[["preserve","לשמור כל depot גם בלי route תואמת"],["existence","רק לבדוק אם route קיימת"],["aggregate","לאגד routes לכל depot"],["children","להחזיר רק routes שיש להן depot"]],ans:"preserve",why:"צריך לשמור parent גם ללא child. LEFT OUTER JOIN שומר את צד ה-depots גם כשאין match.",hint:"מה אמור לקרות ל-Desert Relay אם אין לו אף route?"});
+
+            STAGES[6].predQuiz.push(q("לכל stop, כמה routes יכולים להתאים דרך stops.route_id?",[["one","route אחת"],["many","כמה routes"],["zero","אף route"],["unknown","אי אפשר לדעת"]],"one","stops.route_id מצביע על route אחת."));
+            STAGES[6].predQuiz.push(q("ומאותה route, כמה depots יכולים להתאים דרך routes.depot_id?",[["one","depot אחד"],["many","כמה depots"],["zero","אף depot"],["unknown","אי אפשר לדעת"]],"one","routes.depot_id מצביע על depot אחד, ולכן השרשרת אינה מפצלת stop לכמה parents."));
+            op(6,{q:"איך מגיעים מה-Grain של stop אל שני ה-attributes החסרים?",opts:[["chain","לעבור stops → routes → depots דרך שני ה-Foreign Keys"],["existence","רק לבדוק אם route ו-depot קיימים"],["aggregate","לאגד stops לפי route"],["direct","לחבר stops ישירות ל-depots"]],ans:"chain",why:"route_code מגיע מ-routes ו-depot_name מ-depots. מסלול הקשרים הוא stops → routes → depots, ואותו מתרגמים לשני JOINs.",hint:"איזה relation מחזיק גם route_id וגם depot_id?"});
+            sanity(6,{q:"מתחילים מ-stop, עוברים ל-route אחת ומשם ל-depot אחד. מה אמור לקרות למספר ה-rows לאורך השרשרת?",opts:[["same","להישאר כמו מספר ה-rows ב-stops"],["more","לגדול בכל JOIN"],["less","לקטון בכל JOIN"],["unknown","אי אפשר לצפות"]],ans:"same",why:"בכל שלב כל stop מקבלת parent אחד בלבד. לכן לא נוצרת הכפלה וה-Grain נשאר stop.",after:"השוו ל-SELECT COUNT(*) FROM stops. מספר ה-rows בתוצאה צריך להיות זהה ל-baseline."});
+
+            STAGES[7].short="ממונה ונהג";
+            STAGES[7].eye="אותה relation · שני תפקידים";
+            op(7,{mode:"guided",q:"מה המבנה הרלציוני שהמשימה דורשת?",opts:[["roles","להשתמש ב-drivers בשני תפקידים ולשמור גם driver ללא match"],["exists","רק לבדוק אם supervisor קיימת"],["aggregate","לאגד drivers לפי supervisor"],["depots","לחבר drivers ל-depots"]],ans:"roles",why:"supervisor_id מצביע חזרה אל driver_id באותה relation, וה-driver חייבת להישמר גם כשה-FK הוא NULL. לכן משתמשים בשני aliases וב-LEFT OUTER JOIN.",hint:"מאיזו relation מגיעים גם driver_name וגם supervisor_name, ומה קורה כש-supervisor_id הוא NULL?"});
+            sanity(7,{q:"Dana Levi משמשת supervisor של יותר מ-driver אחת. האם זה אמור לשנות את ה-output Grain?",opts:[["same","לא — עדיין row אחת לכל driver"],["supervisor","כן — ה-Grain הופך ל-supervisor"],["pairs","כן — נוצרות rows מעבר ל-drivers"],["drop","drivers ללא supervisor נעלמות"]],ans:"same",why:"ה-Grain נשאר driver. אותו supervisor_name יכול לחזור בכמה rows בלי ליצור driver חדשה.",after:"השוו ל-SELECT COUNT(*) FROM drivers. מספר ה-rows צריך להיות זהה; drivers ללא supervisor צריכות להישאר עם supervisor_name = NULL."});
+          })();
+          '''
+          s=s.replace(stage_marker,'];\n\n'+override+'\nfunction introHtml(){',1)
+          p.write_text(s,encoding='utf-8')
+          print('patched',p)
+          PY
+      - name: Validate HTML script syntax
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          assert 'EARLY_PEDAGOGY_V11' in s
+          assert 'const APP_STATE_VERSION=11;' in s
+          assert 'Baseline: ב־`routes` יש 13 rows' in s  # still exists only in untouched later stages/strings if any; not used by stage 1 override
+          print('basic validation passed')
+          PY
+      - name: Commit patched index
+        shell: bash
+        run: |
+          git config user.name "routecraft-bot"
+          git config user.email "routecraft-bot@users.noreply.github.com"
+          git add sql-lab/index.html
+          git commit -m "Refine early RouteCraft JOIN pedagogy"
+          git push origin HEAD:routecraft-early-pedagogy-v11
