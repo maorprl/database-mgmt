@@ -6,7 +6,7 @@ permissions:
   contents: write
 jobs:
   rewrite-and-validate:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && contains(github.event.head_commit.message, 'Run course-wide rewrite')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
