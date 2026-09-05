@@ -38,7 +38,7 @@ s = replace_once(s, '(state.stage===1&&!operationChoiceResolved(s))', '(state.st
 s = replace_once(s, "<div class=\"editorhead\"><b>'+(state.stage===1?'SQL לפתרון המשימה':'SQL editor · אתם כותבים ומריצים')+'</b><span>", "<div class=\"editorhead\"><b>SQL editor · אתם כותבים ומריצים</b><span>", 'editor heading')
 
 old_buttons = "<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button><button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>"
-new_buttons = "<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button>'+((state.stage===1&&!operationChoiceResolved(s))?'':'<button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>')"
+new_buttons = "<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button>'+((state.stage===1&&!operationChoiceResolved(s))?'':'<button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>')+'"
 s = replace_once(s, old_buttons, new_buttons, 'stage1 check-answer gate')
 
 run_start = s.index('function runCurrent(){')
