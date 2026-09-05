@@ -16,6 +16,17 @@ jobs:
       - name: Apply course-wide rewrite
         run: |
           cat .github/routecraft-flow-parts/part_* | base64 -d | gzip -d > /tmp/course_flow_rewrite.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/course_flow_rewrite.py')
+          s=p.read_text(encoding='utf-8')
+          start=s.index('# Verify all expected SQL against the seed database')
+          end=s.index("con=sqlite3.connect(':memory:')",start)
+          replacement='''# Verify all expected SQL against the seed database. SEED_SQL is a JS array of quoted statements.\nhtml=P.read_text(encoding='utf-8')\nseed_m=re.search(r'const\\s+SEED_SQL\\s*=\\s*\\[([\\s\\S]*?)\\]\\.join\\(\\"\\\\n\\"\\);',html)\nif not seed_m: raise SystemExit('SEED_SQL array not found')\ntry:\n    seed_parts=json.loads('['+seed_m.group(1)+']')\nexcept json.JSONDecodeError as e:\n    raise SystemExit('SEED_SQL parse failed: '+str(e))\nseed='\\n'.join(seed_parts)\n'''
+          s=s[:start]+replacement+s[end:]
+          p.write_text(s,encoding='utf-8')
+          PY
+          python -m py_compile /tmp/course_flow_rewrite.py
           python /tmp/course_flow_rewrite.py
       - name: Validate JavaScript syntax
         run: |
