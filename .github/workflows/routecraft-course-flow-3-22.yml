@@ -63,7 +63,7 @@ jobs:
           for marker in required:
               if marker not in s:
                   raise SystemExit('missing contract marker: '+marker)
-          start=s.index('{title:"אילו אתרים באמת פעילים?"')
+          start=s.index('אילו אתרים באמת פעילים?')
           end=s.index('function introHtml()',start)
           stage_slice=s[start:end]
           if 'scratch:' in stage_slice or 'צריך לשרבט' in stage_slice:
