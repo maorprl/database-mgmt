@@ -1,0 +1,224 @@
+from pathlib import Path
+import subprocess
+
+BASE='20b6fd2b4c07706dd4852da62ca005e1cdafe10f'
+p=Path('sql-lab/index.html')
+s=p.read_text(encoding='utf-8')
+base=subprocess.check_output(['git','show',f'{BASE}:sql-lab/index.html'],text=True)
+if s != base:
+    raise SystemExit('branch app is not byte-for-byte current main before patch')
+
+def replace_once(text, old, new, label):
+    n=text.count(old)
+    if n!=1:
+        raise SystemExit(f'{label}: expected exactly one match, found {n}')
+    return text.replace(old,new,1)
+
+def stage_spans(text):
+    marker='const STAGES=['
+    m=text.index(marker)
+    a=m+len('const STAGES=')
+    depth=0; quote=None; esc=False
+    for i in range(a,len(text)):
+        c=text[i]
+        if quote:
+            if esc: esc=False
+            elif c=='\\': esc=True
+            elif c==quote: quote=None
+            continue
+        if c in ('"',"'",'`'):
+            quote=c; continue
+        if c=='[':
+            depth+=1
+        elif c==']':
+            depth-=1
+            if depth==0:
+                end=i
+                break
+    else:
+        raise SystemExit('STAGES end not found')
+    spans=[]; depth=0; quote=None; esc=False; start=a+1
+    for i in range(a+1,end):
+        c=text[i]
+        if quote:
+            if esc: esc=False
+            elif c=='\\': esc=True
+            elif c==quote: quote=None
+        else:
+            if c in ('"',"'",'`'): quote=c
+            elif c in '{[(': depth+=1
+            elif c in '}])': depth-=1
+            elif c==',' and depth==0:
+                l=start
+                while l<i and text[l].isspace(): l+=1
+                r=i
+                while r>l and text[r-1].isspace(): r-=1
+                spans.append((l,r)); start=i+1
+    l=start
+    while l<end and text[l].isspace(): l+=1
+    r=end
+    while r>l and text[r-1].isspace(): r-=1
+    if l<r: spans.append((l,r))
+    return spans
+
+base_spans=stage_spans(base)
+if len(base_spans)!=24:
+    raise SystemExit(f'unexpected base stage count: {len(base_spans)}')
+base_objs=[base[l:r] for l,r in base_spans]
+
+stage4='''{title:"באיזה רכב השתמש כל מסלול?",short:"מסלול ורכב",eye:"Transfer · אותו M→1 על relation חדשה",joinViz:"inner",context:"צוות Fleet בודק התאמה בין תוכנית העבודה לצי הרכב.",task:"Fleet צריכים לראות עבור כל route איזה רכב הוקצה לו ומה מאפייני הרכב הרלוונטיים לתכנון קיבולת.",output:"route_code, plate_no, vehicle_type, capacity_kg · מיון לפי route_id.",pred:"זהו Transfer: אין כאן operator חדש. מפעילים על routes ו-vehicles את אותה דרך חשיבה שכבר נלמדה.",predQuiz:[{q:"בבקשה העסקית הזאת, מה כל row בתוצאה צריכה לייצג?",opts:[["route","route"],["vehicle","vehicle"],["depot","depot"],["pair","route × vehicle"]],ans:"route",why:"הבקשה אומרת 'עבור כל route'. לכן כל row בתוצאה צריכה לייצג route אחת.",wrong:"חזרו לבקשה העסקית: איזו יחידה צריכה להופיע פעם אחת בפלט?",concept:"Output Grain = route."},{q:"לפי ה-constraints שמוצגים מעל, לכמה vehicles יכולה route אחת להתאים דרך vehicle_id?",opts:[["one","1 בדיוק"],["zero-one","0 או 1"],["many","many"],["unknown","אי אפשר לדעת"]],ans:"one",why:"routes.vehicle_id הוא NOT NULL Foreign Key אל vehicles.vehicle_id, שהוא Primary Key. לכן לכל route יש vehicle תואם אחד בדיוק.",wrong:"שלבו את שלושת הפרטים: Foreign Key, NOT NULL ו-Primary Key בצד של vehicles.",concept:"Cardinality: vehicles 1:M routes — כל route קשורה ל-vehicle אחת בדיוק."},{q:"אם מתחילים מ-route ומצרפים לה match יחיד מ-vehicles, מה קורה ל-Grain?",opts:[["same","נשאר route"],["multiply","route יכולה להתפצל לכמה rows"],["drop","routes עלולות להיעלם"],["vehicle","ה-Grain הופך ל-vehicle"]],ans:"same",why:"לכל route מצטרפת row אחת בלבד מ-vehicles. לכן אין fan-out ואין איחוד של routes; ה-Grain נשאר route.",wrong:"שאלו כמה matches מקבלת route אחת בצד של vehicles.",concept:"M→1 transfer: צירוף row יחידה מצד ה-1 שומר על Grain של הצד שממנו התחלנו."}],sanity:{baselineSql:"SELECT COUNT(*) AS route_count FROM routes;",q:"הריצו baseline על routes לפני ה-JOIN. אם הניתוח שלנו נכון, איך מספר ה-rows אחרי צירוף פרטי ה-vehicle אמור להיות ביחס ל-baseline?",opts:[["same","אותו מספר rows"],["more","יותר rows"],["less","פחות rows"],["unknown","אי אפשר לצפות"]],ans:"same",why:"Output Grain הוא route ולכל route יש vehicle תואם אחד בדיוק, ולכן ה-JOIN לא אמור להכפיל או להעלים routes.",wrong:"חזרו ל-Output Grain ולמספר ה-matches שכל route מקבלת.",after:"השוו את מספר ה-rows של הפתרון ל-baseline שהרצתם על routes. הם צריכים להיות זהים; אם לא, בדקו את תנאי החיבור."},altSolutions:[{label:"Correlated subqueries",sql:"SELECT r.route_code,(SELECT v.plate_no FROM vehicles v WHERE v.vehicle_id=r.vehicle_id) AS plate_no,(SELECT v.vehicle_type FROM vehicles v WHERE v.vehicle_id=r.vehicle_id) AS vehicle_type,(SELECT v.capacity_kg FROM vehicles v WHERE v.vehicle_id=r.vehicle_id) AS capacity_kg FROM routes r ORDER BY r.route_id;"}],starter:"",expected:"SELECT r.route_code,v.plate_no,v.vehicle_type,v.capacity_kg FROM routes r INNER JOIN vehicles v ON v.vehicle_id=r.vehicle_id ORDER BY r.route_id;",note:"אין כאן operator חדש: זו העברה של אותו M→1 שכבר נלמד.",hints:["התחילו מ-routes: זו יחידת הפלט.","בדקו את routes.vehicle_id מול vehicles.vehicle_id.","הקשר שכבר הסקתם אומר שלכל route יש match יחיד."],solution:"SELECT r.route_code,v.plate_no,v.vehicle_type,v.capacity_kg FROM routes r INNER JOIN vehicles v ON v.vehicle_id=r.vehicle_id ORDER BY r.route_id;",principle:"Transfer: כש-FK NOT NULL של ה-child מפנה ל-PK של parent, לכל child יש match יחיד; צירוף attributes מה-parent שומר על Grain של ה-child."}'''
+
+start=s.index('{title:"באיזה רכב השתמש כל מסלול?"')
+end=s.index('{title:"איך נשמור אתר שעדיין לא יצא ממנו מסלול?"',start)
+s=s[:start]+stage4+',\n'+s[end:]
+
+helpers=r'''
+function stage4RelationsHtml(){
+ return '<div class="stage1-relations">'+
+ '<section class="stage1-relation"><h4>routes</h4><table><thead><tr><th>attribute</th><th>key / constraint</th></tr></thead><tbody>'+
+ '<tr><td>route_id</td><td class="stage1-key">PK</td></tr>'+
+ '<tr><td>route_code</td><td></td></tr>'+
+ '<tr><td>vehicle_id</td><td class="stage1-key">FK → vehicles.vehicle_id · NOT NULL</td></tr>'+
+ '</tbody></table></section>'+
+ '<section class="stage1-relation"><h4>vehicles</h4><table><thead><tr><th>attribute</th><th>key / constraint</th></tr></thead><tbody>'+
+ '<tr><td>vehicle_id</td><td class="stage1-key">PK</td></tr>'+
+ '<tr><td>plate_no</td><td></td></tr>'+
+ '<tr><td>vehicle_type</td><td></td></tr>'+
+ '<tr><td>capacity_kg</td><td></td></tr>'+
+ '</tbody></table></section></div>';
+}
+function stage4ReasoningResolved(s){
+ return state.stage===4&&Array.isArray(s.predQuiz)&&s.predQuiz.every((_,qi)=>predQuestionResolved(4,s,qi));
+}
+function stage4SanityResolved(s){
+ return state.stage===4&&!!((state.sanityChecked||{})[4]&&(state.sanityAnswers||{})[4]===s.sanity.ans);
+}
+function stage4SqlUnlocked(s){return stage4ReasoningResolved(s)&&stage4SanityResolved(s);}
+function stage4PredictionQuizHtml(s){
+ const byStage=(state.predAnswers||{})[4]||{};
+ const renderQ=(qi,before='')=>{
+   const q=s.predQuiz[qi],cur=byStage[qi]||'',checked=predQuestionChecked(4,qi),correct=checked&&cur===q.ans;
+   const concept=(correct&&q.concept)?'<div class="stage1-concept-close"><b>קבענו:</b> '+esc(q.concept)+'</div>':'';
+   const msg=(checked&&cur)?('<div class="answer-exp '+(correct?'good':'wrong')+'"><b>'+(correct?'נכון. ':'עוד לא. ')+'</b>'+esc(correct?q.why:(q.wrong||'חזרו למידע שמופיע מעל השאלה.'))+concept+'</div>'):'';
+   return before+'<div class="pred-q"><label>'+(qi+1)+'. '+esc(q.q)+'</label><select data-predq="'+qi+'"><option value="">בחרו...</option>'+q.opts.map(o=>'<option value="'+esc(o[0])+'" '+(cur===o[0]?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select><div class="actions"><button class="check" data-check-pred="'+qi+'">✓ בדוק תשובה</button></div>'+msg+'</div>';
+ };
+ let out=renderQ(0);
+ if(predQuestionResolved(4,s,0))out+=renderQ(1,stage4RelationsHtml());
+ if(predQuestionResolved(4,s,1))out+=renderQ(2);
+ return '<div class="pred-quiz">'+out+'</div>';
+}
+function stage4TransferNoteHtml(){
+ return '<div class="stage1-concept-note"><h4>Transfer — אין כאן operator חדש</h4><p>זה אותו pattern מפרק 1: מתחילים מצד ה-M, עוברים דרך Foreign Key ל-row יחידה בצד ה-1, ומוסיפים attributes בלי לשנות את ה-Grain.</p></div>';
+}
+function stage4GuidedFlowHtml(s){
+ if(state.stage!==4||!stage4ReasoningResolved(s))return'';
+ return stage4TransferNoteHtml()+sanityHtml(s,false);
+}
+function stage4SolutionExplanationHtml(choice){
+ const text=choice===0
+   ?'ה-query מתחיל מ-routes, ולכן Grain העבודה הוא route. תנאי ה-JOIN מתאים routes.vehicle_id ל-Primary Key של vehicles. מאחר שלכל route יש match יחיד, פרטי הרכב מתווספים לאותה row וה-Grain נשאר route.'
+   :'גם כאן ה-query החיצוני נשאר ברמת route. כל correlated subquery מחפשת attribute אחד אצל ה-vehicle היחיד שמתאים ל-routes.vehicle_id. בגלל FK אל Primary Key מתקבל לכל היותר value אחד לכל route, ולכן ה-Grain החיצוני נשאר route; זו פשוט דרך מסורבלת יותר כשצריכים כמה attributes מאותה relation.';
+ return '<div class="stage1-concept-note"><h4>איך הפתרון הזה עובד?</h4><p>'+esc(text)+'</p></div>';
+}
+'''
+marker='function predictionQuizHtml(s){'
+if 'function stage4PredictionQuizHtml(s)' in s:
+    raise SystemExit('Stage 4 helper already exists')
+s=s.replace(marker,helpers+'\n'+marker,1)
+
+s=replace_once(s,
+  'function predictionQuizHtml(s){\n if(guidedCourseStage())return guidedPredictionQuizHtml(s);',
+  'function predictionQuizHtml(s){\n if(state.stage===4)return stage4PredictionQuizHtml(s);\n if(guidedCourseStage())return guidedPredictionQuizHtml(s);',
+  'predictionQuiz Stage 4 branch')
+
+s=replace_once(s,
+  "const stageTitle=(state.stage===1||state.stage===2||guidedCourseStage())?'מפרקים את הבקשה העסקית':'המודל הרלציוני';",
+  "const stageTitle=state.stage===4?'Transfer · מפעילים את אותה דרך חשיבה':((state.stage===1||state.stage===2||guidedCourseStage())?'מפרקים את הבקשה העסקית':'המודל הרלציוני');",
+  'Stage 4 relational title')
+
+s=replace_once(s,
+  '(state.stage===1?stage1GuidedFlowHtml(s):(state.stage===2?stage2GuidedFlowHtml(s):(guidedCourseStage()?guidedStageFlowHtml(s):(operationHtml(s)+joinVizDisclosureHtml(s)+sanityHtml(s,false)))))+',
+  '(state.stage===1?stage1GuidedFlowHtml(s):(state.stage===2?stage2GuidedFlowHtml(s):(state.stage===4?stage4GuidedFlowHtml(s):(guidedCourseStage()?guidedStageFlowHtml(s):(operationHtml(s)+joinVizDisclosureHtml(s)+sanityHtml(s,false)))))) +',
+  'Stage 4 guided-flow render branch')
+
+s=replace_once(s,
+  '(state.stage===2&&!stage2SanityResolved(s))||(guidedCourseStage()&&!guidedSqlUnlocked(s))',
+  '(state.stage===2&&!stage2SanityResolved(s))||(state.stage===4&&!stage4SqlUnlocked(s))||(guidedCourseStage()&&!guidedSqlUnlocked(s))',
+  'Stage 4 SQL gate')
+
+s=replace_once(s,
+  'const allowFullSolution=state.stage===1?operationChoiceResolved(s):(guidedCourseStage()?guidedSqlUnlocked(s):true);',
+  'const allowFullSolution=state.stage===1?operationChoiceResolved(s):(state.stage===4?stage4SqlUnlocked(s):(guidedCourseStage()?guidedSqlUnlocked(s):true));',
+  'Stage 4 solution gate')
+
+s=replace_once(s,
+  "else if(guidedCourseStage())out+=guidedSolutionExplanationHtml(choice)+'<pre>'+esc(options[choice].sql)+'</pre>';",
+  "else if(state.stage===4)out+=stage4SolutionExplanationHtml(choice)+'<pre>'+esc(options[choice].sql)+'</pre>';\n   else if(guidedCourseStage())out+=guidedSolutionExplanationHtml(choice)+'<pre>'+esc(options[choice].sql)+'</pre>';",
+  'Stage 4 solution explanation')
+
+s=replace_once(s,
+  "):sqlSupportHtml(s,hintText,principleText))+\n '<div class=\"nav\">",
+  "):(state.stage===4&&!stage4SqlUnlocked(s)?'':sqlSupportHtml(s,hintText,principleText)))+\n '<div class=\"nav\">",
+  'Stage 4 support gate')
+
+s=replace_once(s,
+  'const STAGE3_FLOW_VERSION=1;\nconst COURSE_FLOW_VERSION=1;',
+  'const STAGE3_FLOW_VERSION=1;\nconst STAGE4_FLOW_VERSION=1;\nconst COURSE_FLOW_VERSION=1;',
+  'Stage 4 flow version const')
+s=replace_once(s,
+  'stage3FlowVersion:STAGE3_FLOW_VERSION,courseFlowVersion:COURSE_FLOW_VERSION',
+  'stage3FlowVersion:STAGE3_FLOW_VERSION,stage4FlowVersion:STAGE4_FLOW_VERSION,courseFlowVersion:COURSE_FLOW_VERSION',
+  'Stage 4 flow version default')
+migration='''
+ if((raw.stage4FlowVersion||0)<STAGE4_FLOW_VERSION){
+   const maps=["sql","notes","scratch","predAnswers","predChecked","sanityAnswers","sanityChecked","operationAnswers","operationChecked","operationHints","operationOpen","outputOpen","hint","solution","solutionChoice","graphOpen","scaffoldAnswers","scaffoldChecked","checkFailures","skeletonOpen"];
+   maps.forEach(k=>{if(out[k])delete out[k][4];});
+   out.completed=(out.completed||[]).filter(i=>i!==4);
+   out.attempted=(out.attempted||[]).filter(i=>i!==4);
+   out.stage4FlowVersion=STAGE4_FLOW_VERSION;
+ }
+
+'''
+marker=' if((raw.courseFlowVersion||0)<COURSE_FLOW_VERSION){'
+if marker not in s: raise SystemExit('course migration marker missing')
+s=s.replace(marker,migration+marker,1)
+s=replace_once(s,
+  '(raw.stage3FlowVersion||0)<STAGE3_FLOW_VERSION||(raw.courseFlowVersion||0)<COURSE_FLOW_VERSION',
+  '(raw.stage3FlowVersion||0)<STAGE3_FLOW_VERSION||(raw.stage4FlowVersion||0)<STAGE4_FLOW_VERSION||(raw.courseFlowVersion||0)<COURSE_FLOW_VERSION',
+  'Stage 4 load persistence condition')
+
+p.write_text(s,encoding='utf-8')
+
+out=p.read_text(encoding='utf-8')
+out_spans=stage_spans(out)
+if len(out_spans)!=24: raise SystemExit(f'unexpected output stage count: {len(out_spans)}')
+out_objs=[out[l:r] for l,r in out_spans]
+for i,(before,after) in enumerate(zip(base_objs,out_objs)):
+    if i==4:
+        if before==after: raise SystemExit('Stage 4 did not change')
+    elif before!=after:
+        raise SystemExit(f'unauthorized stage object change at index {i}')
+
+st4=out_objs[4]
+required=[
+  'Output Grain = route.',
+  'Cardinality: vehicles 1:M routes',
+  'איך מספר ה-rows אחרי צירוף פרטי ה-vehicle אמור להיות ביחס ל-baseline?',
+  'אין כאן operator חדש',
+  'function stage4PredictionQuizHtml(s)',
+  'function stage4GuidedFlowHtml(s)',
+  'function stage4SqlUnlocked(s)',
+  'function stage4SolutionExplanationHtml(choice)',
+  'STAGE4_FLOW_VERSION=1'
+]
+for x in required:
+    if x not in out: raise SystemExit('missing acceptance marker: '+x)
+if 'operation:' in st4:
+    raise SystemExit('Stage 4 still contains operator quiz/config')
+if '13 rows' in st4 or '13 שורות' in st4:
+    raise SystemExit('Stage 4 still leaks fixed row count in Sanity')
+if 'מה כל row בתוצאה צריכה לייצג?' not in st4:
+    raise SystemExit('Stage 4 Grain question missing')
+if 'FK → vehicles.vehicle_id · NOT NULL' not in out:
+    raise SystemExit('Stage 4 schema constraints missing')
+print('Stage 4 acceptance contract passed; all other STAGES objects unchanged')
