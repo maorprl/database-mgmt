@@ -10,14 +10,10 @@ def replace_once(text, old, new, label):
         raise SystemExit(f'{label}: expected exactly 1 match, found {n}')
     return text.replace(old,new,1)
 
-# Freeze course data: this patch is flow/UI only and must not alter any STAGE object.
 stages_start=s.index('const STAGES=')
 stages_end=s.index('const GUIDED_STAGE_META', stages_start)
 stages_before=s[stages_start:stages_end]
 
-# --- Stage 1: restore the dedicated baseline editor + separate solution editor.
-# The exploration editor stays first. Running the baseline is useful but must not gate access
-# to the operation-choice step.
 old_flow='''function stage1GuidedFlowHtml(s){
  if(state.stage!==1)return '';
  if(!stage1ReasoningResolved(s))return '';
@@ -38,14 +34,10 @@ new_flow='''function stage1GuidedFlowHtml(s){
 }'''
 s=replace_once(s,old_flow,new_flow,'Stage 1 guided flow')
 
-# Remove the one-editor-only prompt that was introduced by mistake.
 start=s.index('function stage1BaselinePromptHtml(){')
 end=s.index('function stage1GuidedFlowHtml(s){',start)
 s=s[:start]+s[end:]
 
-# Keep the exploration editor genuinely exploratory: any read-only SQL can run.
-# If the learner does run the baseline COUNT, remember it for the later comparison,
-# but do not make that recognition a prerequisite for continuing.
 old_explore='''function runStage1Explore(){
  const ta=document.getElementById('exploreSql');
  const val=ta?ta.value:'';
@@ -81,7 +73,6 @@ new_explore='''function runStage1Explore(){
 }'''
 s=replace_once(s,old_explore,new_explore,'Stage 1 exploration runner')
 
-# Clean the baseline confirmation copy left by the one-editor patch.
 s=replace_once(
     s,
     "return '<section class=\"card sanity-card stage1-baseline-check\" aria-label=\"Sanity Check\"><div class=\"sanity-title\">✓ SANITY CHECK · baseline נמדד</div><p><b>נקודת הבקרה:</b> ב-routes יש '+shown+'. זה המספר שאליו נשווה את תוצאת ה-JOIN. זו המדידה שאליה נשווה את תוצאת ה-JOIN.</p></section>';",
@@ -89,8 +80,6 @@ s=replace_once(
     'Stage 1 baseline copy'
 )
 
-# Restore the second/main SQL editor as a separate solution editor, unlocked by the
-# operation choice — not by the baseline query.
 s=replace_once(s,'(state.stage===1&&!stage1ReasoningResolved(s))','(state.stage===1&&!operationChoiceResolved(s))','Stage 1 solution-editor gate')
 s=replace_once(
     s,
@@ -100,10 +89,9 @@ s=replace_once(
 )
 
 old_check_button="<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button>'+((state.stage===1&&!operationChoiceResolved(s))?'':'<button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>')"
-new_check_button="<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button><button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>"
+new_check_button="<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button><button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>'"
 s=replace_once(s,old_check_button,new_check_button,'Stage 1 solution-editor buttons')
 
-# The main solution editor must no longer double as the baseline editor.
 old_run=''' try{
    lastResult=exec(val);lastError='';queryFeedback='';
    if(state.stage===1&&/^\\s*SELECT\\s+COUNT\\s*\\(\\s*\\*\\s*\\)(?:\\s+AS\\s+[A-Za-z_][A-Za-z0-9_]*)?\\s+FROM\\s+routes\\s*;?\\s*$/i.test(val)){
@@ -134,7 +122,6 @@ s=replace_once(
     'Stage 1 final sanity rendering'
 )
 
-# --- Stage 3: question first, then the evidence needed to answer it, then choices.
 s=replace_once(
     s,
     'if(predQuestionResolved(3,s,1))out+=stage3RelationsHtml()+stage3KeyGuideHtml()+renderQ(2);',
@@ -148,7 +135,6 @@ s=replace_once(
     'Stage 3 cardinality placement'
 )
 
-# Acceptance checks.
 out=s
 if out[stages_start:stages_start+len(stages_before)] != stages_before:
     raise SystemExit('STAGES data changed; scope violation')
