@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 1
       - name: Apply course-wide rewrite
         run: |
-          base64 -d .github/routecraft-course-flow-3-22.py.gz.b64 | gzip -d > /tmp/course_flow_rewrite.py
+          cat .github/routecraft-flow-parts/part_* | base64 -d | gzip -d > /tmp/course_flow_rewrite.py
           python /tmp/course_flow_rewrite.py
       - name: Validate JavaScript syntax
         run: |
@@ -52,20 +52,16 @@ jobs:
           for marker in required:
               if marker not in s:
                   raise SystemExit('missing contract marker: '+marker)
-          # The rewritten 3-22 stage slice must not contain the old scratchpad requirement.
           start=s.index('{title:"אילו אתרים באמת פעילים?"')
           end=s.index('function introHtml()',start)
           stage_slice=s[start:end]
           if 'scratch:' in stage_slice or 'צריך לשרבט' in stage_slice:
               raise SystemExit('scratchpad content remains in rewritten stages')
-          # Stage 3 must show its relevant relations before Q2 can be answered.
-          if "showRelationsAfter:0" not in s:
+          if 'showRelationsAfter:0' not in s:
               raise SystemExit('Stage 3 relation timing contract missing')
-          # Open/assessment transfer stages should unlock SQL without a forced operator quiz.
           for idx in [4,9,10,13,18,19,20,21,22]:
               if f'{idx}:{{' not in s:
                   raise SystemExit(f'guided metadata missing for stage {idx}')
-          # Stage 1-2 dedicated flows must still exist.
           for marker in ['function stage1GuidedFlowHtml(s)','function stage2GuidedFlowHtml(s)','function stage1CorrelatedVizHtml()','function stage2CorrelatedVizHtml()']:
               if marker not in s:
                   raise SystemExit('Stage 1-2 regression: '+marker)
