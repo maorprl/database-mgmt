@@ -1,0 +1,172 @@
+name: RouteCraft revert 4-22 keep 3
+on:
+  push:
+    branches: [routecraft-revert-4-22-keep-3]
+permissions:
+  contents: write
+jobs:
+  build-and-validate:
+    if: github.actor != 'github-actions[bot]' && contains(github.event.head_commit.message, 'Run hybrid revert')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: routecraft-revert-4-22-keep-3
+          fetch-depth: 0
+      - name: Restore Stages 4-22 from previous main and keep current Stage 3
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          OLD='392c6982f57e01eea4d45c3af9e5155bfd01f646'
+          p=Path('sql-lab/index.html')
+          current=p.read_text(encoding='utf-8')
+          old=subprocess.check_output(['git','show',f'{OLD}:sql-lab/index.html'],text=True)
+
+          def stages_bounds(s):
+              marker='const STAGES=['
+              m=s.index(marker)
+              arr_start=m+len('const STAGES=')
+              assert s[arr_start]=='['
+              depth=0; quote=None; esc=False
+              for i in range(arr_start,len(s)):
+                  c=s[i]
+                  if quote:
+                      if esc: esc=False
+                      elif c=='\\': esc=True
+                      elif c==quote: quote=None
+                      continue
+                  if c in ('\"',"'",'`'):
+                      quote=c; continue
+                  if c=='[': depth+=1
+                  elif c==']':
+                      depth-=1
+                      if depth==0: return arr_start,i
+              raise RuntimeError('STAGES closing bracket not found')
+
+          def element_spans(s):
+              a,b=stages_bounds(s)
+              spans=[]; start=a+1; depth=0; quote=None; esc=False
+              i=start
+              while i<b:
+                  c=s[i]
+                  if quote:
+                      if esc: esc=False
+                      elif c=='\\': esc=True
+                      elif c==quote: quote=None
+                  else:
+                      if c in ('\"',"'",'`'): quote=c
+                      elif c in '{[(': depth+=1
+                      elif c in '}])': depth-=1
+                      elif c==',' and depth==0:
+                          l=start
+                          while l<i and s[l].isspace(): l+=1
+                          r=i
+                          while r>l and s[r-1].isspace(): r-=1
+                          spans.append((l,r))
+                          start=i+1
+                  i+=1
+              l=start
+              while l<b and s[l].isspace(): l+=1
+              r=b
+              while r>l and s[r-1].isspace(): r-=1
+              if l<r: spans.append((l,r))
+              return spans
+
+          cur_spans=element_spans(current)
+          old_spans=element_spans(old)
+          if len(cur_spans)!=23 or len(old_spans)!=23:
+              raise SystemExit(f'unexpected stage count current={len(cur_spans)} old={len(old_spans)}')
+
+          current_stage=[current[l:r] for l,r in cur_spans]
+          old_stage=[old[l:r] for l,r in old_spans]
+          hybrid=current
+          # Replace only Stages 4-22, from the end backwards so offsets remain valid.
+          for idx in range(22,3,-1):
+              l,r=cur_spans[idx]
+              hybrid=hybrid[:l]+old_stage[idx]+hybrid[r:]
+
+          old_gate='function guidedCourseStage(i=state.stage){return i>=3&&i<=22;}'
+          new_gate='function guidedCourseStage(i=state.stage){return i===3;}'
+          if hybrid.count(old_gate)!=1:
+              raise SystemExit('guidedCourseStage broad gate not found exactly once')
+          hybrid=hybrid.replace(old_gate,new_gate,1)
+          p.write_text(hybrid,encoding='utf-8')
+
+          # Acceptance contract: Stage 3 is byte-for-byte the current live Stage 3 object;
+          # Stages 4-22 are byte-for-byte the pre-mass-rewrite objects.
+          out=p.read_text(encoding='utf-8')
+          out_spans=element_spans(out)
+          out_stage=[out[l:r] for l,r in out_spans]
+          if out_stage[3] != current_stage[3]:
+              raise SystemExit('Stage 3 changed unexpectedly')
+          for idx in range(4,23):
+              if out_stage[idx] != old_stage[idx]:
+                  raise SystemExit(f'Stage {idx} does not match previous version')
+          for idx in range(0,3):
+              if out_stage[idx] != current_stage[idx]:
+                  raise SystemExit(f'Stage {idx} changed unexpectedly')
+          if new_gate not in out or old_gate in out:
+              raise SystemExit('guided flow was not narrowed to Stage 3 only')
+          print('hybrid restore verified: current Stage 3 kept; Stages 4-22 restored')
+          PY
+      - name: Validate JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script[^>]*>([\s\S]*?)</script>',s)
+          inline=[x for x in scripts if x.strip()]
+          if not inline: raise SystemExit('no inline script found')
+          Path('/tmp/routecraft.js').write_text(inline[-1],encoding='utf-8')
+          PY
+          node --check /tmp/routecraft.js
+      - name: Validate Stage 3 current flow and old 4-22 behavior gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          required=[
+            'function guidedCourseStage(i=state.stage){return i===3;}',
+            'function guidedPredictionQuizHtml(s)',
+            'function guidedStageFlowHtml(s)',
+            'function guidedSqlUnlocked(s)',
+            'function guidedRelationsHtml()',
+            'אילו אתרים באמת פעילים?',
+            'מה אנחנו באמת צריכים מ-drivers ומ-routes כדי לענות לבקשה?'
+          ]
+          for x in required:
+              if x not in s: raise SystemExit('missing Stage 3 current-flow marker: '+x)
+          # These are markers from the old 4-22 course that must be back.
+          old_markers=[
+            'איך נשמור אתר שעדיין לא יצא ממנו מסלול?',
+            'מה בדיוק אנחנו סופרים?',
+            'כמה מקטעים עבר כל משלוח?',
+            'Capstone: איפה נדרשת התערבות?',
+            'מבחן קבלה: reconcile תוכנית מול ביצוע',
+            'Transfer: סכמה זרה'
+          ]
+          for x in old_markers:
+              if x not in s: raise SystemExit('missing restored old-stage marker: '+x)
+          # Mass-rewrite replacements that should no longer be active stage titles.
+          if 'מה קורה כשאין tracker לרכב?' in s[s.index('const STAGES=['):s.index('function introHtml()')]:
+              raise SystemExit('mass-rewrite Stage 5 title still present in STAGES')
+          PY
+      - name: Commit app only
+        run: |
+          if git diff --quiet -- sql-lab/index.html; then
+            echo 'No app diff produced' >&2
+            exit 1
+          fi
+          changed=$(git diff --name-only)
+          if [ "$changed" != "sql-lab/index.html" ]; then
+            echo "Unexpected working-tree changes: $changed" >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sql-lab/index.html
+          git commit -m 'Restore Stages 4-22 and keep current Stage 3'
+          git push origin HEAD:routecraft-revert-4-22-keep-3
