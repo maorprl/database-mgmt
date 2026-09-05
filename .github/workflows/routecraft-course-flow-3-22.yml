@@ -43,6 +43,7 @@ jobs:
           node --check /tmp/routecraft.js
       - name: Validate learner-flow contract
         run: |
+          grep -n -E 'showRelations|RelationsAfter|relationsAfter|guidedRelations' sql-lab/index.html | head -50 || true
           python - <<'PY'
           from pathlib import Path
           import re
