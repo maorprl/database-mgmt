@@ -1447,8 +1447,8 @@ function predictionQuizHtml(s){
    };
    let out=renderQ(0);
    if(predQuestionResolved(3,s,0))out+=renderQ(1);
-   if(predQuestionResolved(3,s,1))out+=stage3RelationsHtml()+stage3KeyGuideHtml()+renderQ(2);
-   if(predQuestionResolved(3,s,2))out+=stage3CardinalityMapHtml()+renderQ(3);
+   if(predQuestionResolved(3,s,1))out+=renderQ(2,stage3RelationsHtml()+stage3KeyGuideHtml());
+   if(predQuestionResolved(3,s,2))out+=renderQ(3,stage3CardinalityMapHtml());
    if(predQuestionResolved(3,s,3))out+=renderQ(4);
    if(predQuestionResolved(3,s,4))out+=stage3GrainMismatchHtml();
    return '<div class="pred-quiz">'+out+'</div>';
@@ -1603,7 +1603,7 @@ function stage1BaselineCount(s){
 function stage1BaselineSanityHtml(s){
  const n=stage1BaselineCount(s);
  const shown=n===null?'נמדד בעורך ה-SQL':('<span class="baseline-number">'+n+' rows</span>');
- return '<section class="card sanity-card stage1-baseline-check" aria-label="Sanity Check"><div class="sanity-title">✓ SANITY CHECK · baseline נמדד</div><p><b>נקודת הבקרה:</b> ב-routes יש '+shown+'. זה המספר שאליו נשווה את תוצאת ה-JOIN. זו המדידה שאליה נשווה את תוצאת ה-JOIN.</p></section>';
+ return '<section class="card sanity-card stage1-baseline-check" aria-label="Sanity Check"><div class="sanity-title">✓ SANITY CHECK · baseline נמדד</div><p><b>נקודת הבקרה:</b> ב-routes יש '+shown+'. זה המספר שאליו נשווה את תוצאת ה-JOIN.</p></section>';
 }
 function stage1FinalSanityHtml(s){
  if(!lastResult)return'';
@@ -1624,16 +1624,13 @@ function stage1ExplorationHtml(s){
  const err=exploreError?'<div class="feedback bad">'+esc(exploreError)+'</div>':'';
  return '<section class="editor exploration-editor"><div class="editorhead"><b>SQL לחקירה · baseline</b><span>לא נבדק כפתרון ולא משפיע על ההתקדמות</span></div><div class="explore-note">בדקו בעצמכם כמה rows יש ב-routes. השאילתה מוכנה; הריצו אותה וקראו את התוצאה.</div><textarea id="exploreSql" spellcheck="false">'+esc(sql)+'</textarea><div class="editorfoot"><span>זהו אזור חקירה. אפשר לשנות את השאילתה ולנסות דברים.</span><div class="editor-buttons"><button class="run" id="runExplore" '+(!db?'disabled':'')+'>▶ הרץ לחקירה</button></div></div></section>'+result+err;
 }
-function stage1BaselinePromptHtml(){
- return '<section class="card sanity-card stage1-baseline-check" aria-label="Sanity Check"><div class="sanity-title">⚠ SANITY CHECK · לפני החיבור</div><p><b>בדיקת baseline:</b> השתמשו בעורך ה-SQL למטה כדי לבדוק כמה rows יש ב-routes. הריצו <span class="inline-ltr">SELECT COUNT(*) FROM routes;</span> — המספר שתקבלו יהיה נקודת הבקרה להשוואה אחרי ה-JOIN.</p></section>';
-}
 function stage1GuidedFlowHtml(s){
  if(state.stage!==1)return '';
  if(!stage1ReasoningResolved(s))return '';
- let out='';
- if(!((state.exploreRan||{})[1]))out+=stage1BaselinePromptHtml();
- else out+=stage1BaselineSanityHtml(s)+operationHtml(s);
- if((state.exploreRan||{})[1]&&operationChoiceResolved(s))out+=stage1JoinPredicateHtml()+joinVizDisclosureHtml(s);
+ let out=stage1ExplorationHtml(s);
+ if((state.exploreRan||{})[1])out+=stage1BaselineSanityHtml(s);
+ out+=operationHtml(s);
+ if(operationChoiceResolved(s))out+=stage1JoinPredicateHtml()+joinVizDisclosureHtml(s);
  return out;
 }
 function stage2GuidedFlowHtml(s){
@@ -1646,15 +1643,18 @@ function runStage1Explore(){
  const ta=document.getElementById('exploreSql');
  const val=ta?ta.value:'';
  state.exploreSql[1]=val;
- if(!/\bCOUNT\s*\(\s*\*\s*\)/i.test(val)||!/\bFROM\s+routes\b/i.test(val)){
-   exploreResult=null;exploreError='בשלב הזה המטרה היא למצוא baseline: הריצו COUNT(*) על routes.';state.exploreRan[1]=false;save();render();return;
- }
+ if(!val.trim()){exploreResult=null;exploreError='כתבו שאילתת SQL לפני ההרצה.';save();render();return;}
  try{
-   exploreResult=exec(val);exploreError='';state.exploreRan[1]=true;
-   const n=Number(exploreResult&&exploreResult.values&&exploreResult.values[0]&&exploreResult.values[0][0]);
-   if(Number.isFinite(n))state.stage1BaselineCount=n;
+   exploreResult=exec(val);exploreError='';
+   if(/^\s*SELECT\s+COUNT\s*\(\s*\*\s*\)(?:\s+AS\s+[A-Za-z_][A-Za-z0-9_]*)?\s+FROM\s+routes\s*;?\s*$/i.test(val)){
+     const n=Number(exploreResult&&exploreResult.values&&exploreResult.values[0]&&exploreResult.values[0][0]);
+     if(Number.isFinite(n)){
+       state.exploreRan[1]=true;
+       state.stage1BaselineCount=n;
+     }
+   }
  }
- catch(e){exploreResult=null;exploreError=friendlySqlError(e.message,val,1);state.exploreRan[1]=false;}
+ catch(e){exploreResult=null;exploreError=friendlySqlError(e.message,val,1);}
  save();render();
 }
 
@@ -1821,9 +1821,9 @@ function render(){
  (state.stage===1?stage1GuidedFlowHtml(s):(state.stage===2?stage2GuidedFlowHtml(s):(state.stage===4?stage4GuidedFlowHtml(s):(guidedCourseStage()?guidedStageFlowHtml(s):(operationHtml(s)+joinVizDisclosureHtml(s)+sanityHtml(s,false)))))) +
  scaffoldHtml(s)+
  scaffoldGateHtml(s)+
- ((s.summary||s.intro||!scaffoldComplete(s)||(state.stage===1&&!stage1ReasoningResolved(s))||(state.stage===2&&!stage2SanityResolved(s))||(state.stage===4&&!stage4SqlUnlocked(s))||(guidedCourseStage()&&!guidedSqlUnlocked(s)))?'':'<section class="editor"><div class="editorhead"><b>SQL editor · אתם כותבים ומריצים</b><span>'+((state.stage===1&&s.sqlRequirement)?'דרישות SQL: '+esc(s.sqlRequirement)+' · ':'')+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button>'+((state.stage===1&&!operationChoiceResolved(s))?'':'<button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button>')+'</div></div></section>')+
+ ((s.summary||s.intro||!scaffoldComplete(s)||(state.stage===1&&!operationChoiceResolved(s))||(state.stage===2&&!stage2SanityResolved(s))||(state.stage===4&&!stage4SqlUnlocked(s))||(guidedCourseStage()&&!guidedSqlUnlocked(s)))?'':'<section class="editor"><div class="editorhead"><b>'+(state.stage===1?'SQL לפתרון המשימה':'SQL editor · אתם כותבים ומריצים')+'</b><span>'+((state.stage===1&&s.sqlRequirement)?'דרישות SQL: '+esc(s.sqlRequirement)+' · ':'')+dbStatus+'</span></div><div id="cmwrap"><textarea id="sql" spellcheck="false" placeholder="כתבו כאן את שאילתת ה-SQL שלכם...">'+esc(sqlText())+'</textarea></div><div class="editorfoot"><span>'+(s.mapping?'הריצו relation אחד בכל פעם · Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה':'Highlight = הרצת הבחירה בלבד · Ctrl/Cmd+Enter להרצה · Ctrl/Cmd+Z לביטול · נשמר אוטומטית')+'</span><div class="editor-buttons"><button class="run" id="run" '+(!db?'disabled':'')+' title="מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.">▶ הרץ וחקור</button><button class="checkquery" id="checkQuery" '+(!db?'disabled':'')+' title="מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.">✓ בדוק תשובה</button>'+'</div></div></section>')+
  skeletonHtml(s)+
- ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?sqlErrorHtml(lastError):resultHtml(lastResult))+(lastResult&&s.sanity?(state.stage===1?(operationChoiceResolved(s)?stage1FinalSanityHtml(s):''):'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>'):'')+'</section>':'')+
+ ((lastResult||lastError)?'<section class="card result" id="resultCard"><div class="resulthead"><b>Query result</b><span>'+(lastResult?lastResult.values.length+' rows':'error')+'</span></div>'+(lastError?sqlErrorHtml(lastError):resultHtml(lastResult))+(lastResult&&s.sanity?(state.stage===1?stage1FinalSanityHtml(s):'<div class="result-verify"><b>Verify:</b> '+mixedInlineHtml(s.sanity.after)+'</div>'):'')+'</section>':'')+
  (queryFeedback?'<div id="queryFeedback" class="feedback '+(queryFeedback.startsWith('נכון')||queryFeedback.startsWith('השאילתה תקינה')||queryFeedback.startsWith('התוצאה נכונה')?'ok':'bad')+'" aria-live="polite">'+esc(queryFeedback)+'</div>':'')+
  (queryFeedback&&s.fanoutTrap?fanoutLessonHtml(state.sql[state.stage]||''):'')+
  ((s.intro||s.mapping||s.summary)?('<section class="card reason"><label>'+(s.intro?'מפת המונחים':s.mapping?'תשובה מובנית':'סיכום · מסגרת החלטה')+'</label><small>'+noteText+'</small>'+(s.intro?introHtml():s.mapping?structuredHtml():decisionHtml())+'<div class="actions">'+(s.intro?'<button class="check" id="checkIntro">הבנתי, אפשר להמשיך</button>':s.mapping?'<button class="check" id="check">בדוק תשובה</button>':'<button class="check" id="checkDecision">בדוק תשובות</button>')+(s.intro?'':'<button class="hintbtn" id="hint">רמז</button><button class="solutionbtn" id="solution">פתרון</button>')+'</div>'+(state.hint[state.stage]!==undefined&&!s.intro?'<div class="hintbox">'+hintText+'</div>':'')+(feedback?'<div class="feedback '+(feedback.startsWith('נכון')||feedback.startsWith('מצוין')||feedback.startsWith('מעולה')?'ok':'bad')+'">'+esc(feedback)+'</div>':'')+(state.solution[state.stage]&&!s.intro?'<div class="solutionbox"><b>פתרון מוצע</b><p>'+esc(s.solution)+'</p><p><b>עיקרון:</b> '+principleText+'</p></div>':'')+'</section>'):(state.stage===4&&!stage4SqlUnlocked(s)?'':sqlSupportHtml(s,hintText,principleText)))+
@@ -1873,17 +1873,7 @@ function runCurrent(){
  if(!val.trim()){lastResult=null;lastError='כתבו שאילתת SQL לפני ההרצה.';render();return;}
  if(!state.attempted.includes(state.stage))state.attempted.push(state.stage);
  save();
- try{
-   lastResult=exec(val);lastError='';queryFeedback='';
-   if(state.stage===1&&/^\s*SELECT\s+COUNT\s*\(\s*\*\s*\)(?:\s+AS\s+[A-Za-z_][A-Za-z0-9_]*)?\s+FROM\s+routes\s*;?\s*$/i.test(val)){
-     const n=Number(lastResult&&lastResult.values&&lastResult.values[0]&&lastResult.values[0][0]);
-     if(Number.isFinite(n)){
-       state.exploreRan[1]=true;
-       state.stage1BaselineCount=n;
-       save();
-     }
-   }
- }
+ try{lastResult=exec(val);lastError='';queryFeedback='';}
  catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
  render();
 }
@@ -1923,7 +1913,7 @@ function bind(){
  const operationAnswer=document.getElementById('operationAnswer');
  if(operationAnswer)operationAnswer.onchange=()=>{state.operationAnswers[state.stage]=operationAnswer.value;state.operationChecked[state.stage]=false;save();render();};
  const checkOperation=document.getElementById('checkOperation');
- if(checkOperation)checkOperation.onclick=()=>{state.operationChecked[state.stage]=true;if(state.stage===1&&state.operationAnswers[1]===curr().operation.ans)invalidateResult();save();render();};
+ if(checkOperation)checkOperation.onclick=()=>{state.operationChecked[state.stage]=true;save();render();};
  const operationHint=document.getElementById('operationHint');
  if(operationHint)operationHint.onclick=()=>{state.operationHints[state.stage]=!state.operationHints[state.stage];save();render();};
  document.querySelectorAll('[data-grain]').forEach(el=>el.onchange=()=>{state.structured.grain[el.dataset.grain]=el.value;save();render();});
