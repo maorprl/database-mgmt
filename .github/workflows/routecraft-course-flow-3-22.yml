@@ -45,6 +45,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           s=Path('sql-lab/index.html').read_text(encoding='utf-8')
           required=[
             'const COURSE_FLOW_VERSION=1;',
@@ -68,10 +69,10 @@ jobs:
           stage_slice=s[start:end]
           if 'scratch:' in stage_slice or 'צריך לשרבט' in stage_slice:
               raise SystemExit('scratchpad content remains in rewritten stages')
-          if 'showRelationsAfter:0' not in s:
+          if not re.search(r'["\']?showRelationsAfter["\']?\s*:\s*0',s):
               raise SystemExit('Stage 3 relation timing contract missing')
           for idx in [4,9,10,13,18,19,20,21,22]:
-              if f'"{idx}":{{' not in s:
+              if not re.search(r'["\']?'+str(idx)+r'["\']?\s*:\s*\{',s):
                   raise SystemExit(f'guided metadata missing for stage {idx}')
           for marker in ['function stage1GuidedFlowHtml(s)','function stage2GuidedFlowHtml(s)','function stage1CorrelatedVizHtml()','function stage2CorrelatedVizHtml()']:
               if marker not in s:
