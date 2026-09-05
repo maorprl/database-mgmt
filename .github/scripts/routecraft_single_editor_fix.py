@@ -10,7 +10,6 @@ def replace_once(text, old, new, label):
         raise SystemExit(f'{label}: expected exactly one match, found {n}')
     return text.replace(old, new, 1)
 
-# Idempotence: if the dedicated exploration editor is already gone, only validate markers.
 already_done = 'function stage1ExplorationHtml(s){' not in s
 
 if not already_done:
@@ -107,7 +106,6 @@ function stage1GuidedFlowHtml(s){
 
     p.write_text(s, encoding='utf-8')
 
-# Acceptance checks.
 s = p.read_text(encoding='utf-8')
 for x in [
     'id="exploreSql"', 'id="runExplore"', 'stage1ExplorationHtml', 'runStage1Explore',
@@ -117,15 +115,16 @@ for x in [
         raise SystemExit(f'obsolete second-editor marker remains: {x}')
 
 for x in [
-    'function stage1BaselinePromptHtml()', 'השתמשו בעורך SQL היחיד למטה',
-    "state.stage===1&&/\\bCOUNT\\s*\\(\\s*\\*\\s*\\)/i.test(val)",
-    'state.exploreRan[1]=true', 'state.stage===1&&!operationChoiceResolved(s)',
-    '<b>SQL editor · אתם כותבים ומריצים</b>'
+    'function stage1BaselinePromptHtml()',
+    'השתמשו בעורך SQL היחיד למטה',
+    'state.exploreRan[1]=true',
+    'state.stage===1&&!operationChoiceResolved(s)',
+    '<b>SQL editor · אתם כותבים ומריצים</b>',
+    'FROM\\s+routes'
 ]:
     if x not in s:
         raise SystemExit(f'required single-editor marker missing: {x}')
 
-# Preserve the earlier explicitly requested Stage 3/4 corrections.
 for x in [
     'אם ל-depot יש 3 drivers ו-3 routes, כמה rows ייווצרו בחיבור גולמי של שני ענפי ה-M?',
     'eye:"מסלול → רכב · קשר M→1"',
