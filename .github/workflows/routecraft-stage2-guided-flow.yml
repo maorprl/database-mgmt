@@ -1,0 +1,62 @@
+name: RouteCraft Stage 2 guided flow
+on:
+  push:
+    branches:
+      - routecraft-stage2-guided-flow
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Stage 2 guided flow
+        run: python .github/routecraft-stage2-guided-flow.py
+      - name: Validate JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script[^>]*>([\s\S]*?)</script>',s)
+          inline=[x for x in scripts if x.strip()]
+          if not inline:
+              raise SystemExit('No inline script found')
+          Path('/tmp/app.js').write_text(inline[-1],encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+      - name: Validate Stage 2 flow markers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          required=[
+            'renderQ(1,stage2RelationsHtml())',
+            'depots&nbsp;&nbsp; 1 ───── M &nbsp;&nbsp;drivers',
+            'NULL = חסר value ב-attribute, לא חסרה row.',
+            'function stage2GuidedFlowHtml(s)',
+            'state.stage===2&&!stage2SanityResolved(s)'
+          ]
+          missing=[x for x in required if x not in s]
+          if missing:
+              raise SystemExit('Missing: '+repr(missing))
+          # Stage 3 anchor must still be present unchanged.
+          if '{title:"אילו אתרים באמת פעילים?",short:"נהג וגם מסלול"' not in s:
+              raise SystemExit('Stage 3 anchor changed unexpectedly')
+          print('Stage 2 markers OK')
+          PY
+      - name: Guard scope
+        run: |
+          git diff --exit-code -- . ':!sql-lab/index.html' ':!.github/routecraft-stage2-guided-flow.py' ':!.github/workflows/routecraft-stage2-guided-flow.yml'
+          git diff --check -- sql-lab/index.html
+      - name: Commit validated app change
+        run: |
+          if git diff --quiet -- sql-lab/index.html; then
+            echo 'No app changes to commit'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sql-lab/index.html
+          git commit -m 'Guide Stage 2 through grain and cardinality'
+          git push
