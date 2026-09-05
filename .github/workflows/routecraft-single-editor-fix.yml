@@ -15,7 +15,15 @@ jobs:
           fetch-depth: 0
       - name: Patch and validate
         run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/routecraft_single_editor_fix.py')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('"state.stage===1&&/\\\\bCOUNT\\\\s*\\\\(\\\\s*\\\\*\\\\s*\\\\)/i.test(val)",','"state.stage===1&&/",')
+          p.write_text(s,encoding='utf-8')
+          PY
           python .github/scripts/routecraft_single_editor_fix.py
+          git restore .github/scripts/routecraft_single_editor_fix.py
           python - <<'PY'
           from pathlib import Path
           import re
