@@ -51,8 +51,8 @@ jobs:
             'function guidedPredictionQuizHtml(s)',
             'function guidedStageFlowHtml(s)',
             'function guidedSqlUnlocked(s)',
-            'function guidedRelationsHtml(meta)',
-            'function guidedSolutionExplanationHtml(s,choice)',
+            'function guidedRelationsHtml()',
+            'function guidedSolutionExplanationHtml(choice)',
             'אילו אתרים באמת פעילים?',
             'מה קורה כשאין tracker לרכב?',
             'איזה משלוח נסע באיזה מסלול?',
@@ -71,7 +71,7 @@ jobs:
           if 'showRelationsAfter:0' not in s:
               raise SystemExit('Stage 3 relation timing contract missing')
           for idx in [4,9,10,13,18,19,20,21,22]:
-              if f'{idx}:{{' not in s:
+              if f'"{idx}":{{' not in s:
                   raise SystemExit(f'guided metadata missing for stage {idx}')
           for marker in ['function stage1GuidedFlowHtml(s)','function stage2GuidedFlowHtml(s)','function stage1CorrelatedVizHtml()','function stage2CorrelatedVizHtml()']:
               if marker not in s:
