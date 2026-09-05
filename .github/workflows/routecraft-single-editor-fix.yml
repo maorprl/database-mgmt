@@ -1,131 +1,21 @@
 name: RouteCraft single editor fix
-"on":
+on:
   push:
-    branches: [routecraft-single-editor-fix]
+    branches:
+      - routecraft-single-editor-fix
 permissions:
   contents: write
 jobs:
   patch-and-validate:
-    if: github.actor != 'github-actions[bot]' && contains(github.event.head_commit.message, 'Trigger single editor fix')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: routecraft-single-editor-fix
           fetch-depth: 0
-      - name: Patch Stage 1 to one SQL editor
+      - name: Patch and validate
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('sql-lab/index.html')
-          s=p.read_text(encoding='utf-8')
-
-          def replace_once(text, old, new, label):
-              n=text.count(old)
-              if n!=1:
-                  raise SystemExit(f'{label}: expected exactly one match, found {n}')
-              return text.replace(old,new,1)
-
-          start=s.index('function stage1ExplorationHtml(s){')
-          end=s.index('function stage1GuidedFlowHtml(s){', start)
-          s=s[:start]+s[end:]
-
-          old_flow='''function stage1GuidedFlowHtml(s){
- if(state.stage!==1)return '';
- if(!stage1ReasoningResolved(s))return '';
- let out=stage1ExplorationHtml(s);
- if((state.exploreRan||{})[1])out+=stage1BaselineSanityHtml(s)+operationHtml(s);
- if((state.exploreRan||{})[1]&&operationChoiceResolved(s))out+=stage1JoinPredicateHtml()+joinVizDisclosureHtml(s);
- return out;
-}'''
-          new_flow='''function stage1BaselinePromptHtml(){
- return '<section class="card sanity-card stage1-baseline-check" aria-label="Sanity Check"><div class="sanity-title">⚠ SANITY CHECK · לפני החיבור</div><p><b>בדיקת baseline:</b> השתמשו בעורך SQL היחיד למטה כדי לבדוק כמה rows יש ב-routes. הריצו COUNT(*) על routes; המספר שתקבלו יהיה נקודת הבקרה להשוואה אחרי ה-JOIN.</p></section>';
-}
-function stage1GuidedFlowHtml(s){
- if(state.stage!==1)return '';
- if(!stage1ReasoningResolved(s))return '';
- let out='';
- if(!((state.exploreRan||{})[1]))out+=stage1BaselinePromptHtml();
- else out+=stage1BaselineSanityHtml(s)+operationHtml(s);
- if((state.exploreRan||{})[1]&&operationChoiceResolved(s))out+=stage1JoinPredicateHtml()+joinVizDisclosureHtml(s);
- return out;
-}'''
-          s=replace_once(s,old_flow,new_flow,'stage1 guided flow')
-
-          old_baseline="""function stage1BaselineSanityHtml(s){
- const n=stage1BaselineCount(s);
- const shown=n===null?'נמדד באזור החקירה':('<span class=\"baseline-number\">'+n+' rows</span>');
- return '<section class=\"card sanity-card stage1-baseline-check\" aria-label=\"Sanity Check\"><div class=\"sanity-title\">✓ SANITY CHECK · baseline נמדד</div><p><b>נקודת הבקרה:</b> ב-routes יש '+shown+'. זה המספר שאליו נשווה את תוצאת ה-JOIN. אין כאן עוד תחזית חדשה — רק מדידה של התחזית שכבר קבענו ב-Effect.</p></section>';
-}"""
-          new_baseline="""function stage1BaselineSanityHtml(s){
- const n=stage1BaselineCount(s);
- const shown=n===null?'נמדד בעורך SQL':('<span class=\"baseline-number\">'+n+' rows</span>');
- return '<section class=\"card sanity-card stage1-baseline-check\" aria-label=\"Sanity Check\"><div class=\"sanity-title\">✓ SANITY CHECK · baseline נמדד</div><p><b>נקודת הבקרה:</b> ב-routes יש '+shown+'. זה המספר שאליו נשווה את תוצאת ה-JOIN. זו מדידה של הציפייה שכבר קבענו לפי ה-Grain וה-Cardinality.</p></section>';
-}"""
-          s=replace_once(s,old_baseline,new_baseline,'baseline wording')
-
-          old_gate="((s.summary||s.intro||!scaffoldComplete(s)||(state.stage===1&&!operationChoiceResolved(s))||(state.stage===2&&!stage2SanityResolved(s))||(state.stage===4&&!stage4SqlUnlocked(s))||(guidedCourseStage()&&!guidedSqlUnlocked(s)))?'':'<section class=\"editor\">"
-          new_gate="((s.summary||s.intro||!scaffoldComplete(s)||(state.stage===2&&!stage2SanityResolved(s))||(state.stage===4&&!stage4SqlUnlocked(s))||(guidedCourseStage()&&!guidedSqlUnlocked(s)))?'':'<section class=\"editor\">"
-          s=replace_once(s,old_gate,new_gate,'stage1 editor gate')
-
-          s=replace_once(s,"<div class=\"editorhead\"><b>'+(state.stage===1?'SQL לפתרון המשימה':'SQL editor · אתם כותבים ומריצים')+'</b><span>","<div class=\"editorhead\"><b>SQL editor · אתם כותבים ומריצים</b><span>",'single editor title')
-
-          old_button="<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button><button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>"
-          new_button="<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button>'+((state.stage===1&&!operationChoiceResolved(s))?'':'<button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>')"
-          s=replace_once(s,old_button,new_button,'check answer gate')
-
-          old_run=""" try{lastResult=exec(val);lastError='';queryFeedback='';}
- catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
- render();
-}"""
-          new_run=""" try{
-   lastResult=exec(val);lastError='';queryFeedback='';
-   if(state.stage===1&&/\\bCOUNT\\s*\\(\\s*\\*\\s*\\)/i.test(val)&&/\\bFROM\\s+routes\\b/i.test(val)){
-     const n=Number(lastResult&&lastResult.values&&lastResult.values[0]&&lastResult.values[0][0]);
-     if(Number.isFinite(n)){
-       state.exploreRan[1]=true;
-       state.stage1BaselineCount=n;
-       save();
-     }
-   }
- }
- catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
- render();
-}"""
-          s=replace_once(s,old_run,new_run,'shared editor baseline detection')
-
-          old_op="if(checkOperation)checkOperation.onclick=()=>{state.operationChecked[state.stage]=true;save();render();};"
-          new_op="if(checkOperation)checkOperation.onclick=()=>{state.operationChecked[state.stage]=true;if(state.stage===1&&state.operationAnswers[1]===curr().operation.ans)invalidateResult();save();render();};"
-          s=replace_once(s,old_op,new_op,'stage1 stale baseline result')
-
-          old_bind=""" const exploreSql=document.getElementById('exploreSql');
- if(exploreSql){
-   exploreSql.oninput=()=>{state.exploreSql[1]=exploreSql.value;save();};
-   exploreSql.onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runStage1Explore();}};
- }
- const runExplore=document.getElementById('runExplore');
- if(runExplore)runExplore.onclick=runStage1Explore;
-"""
-          s=replace_once(s,old_bind,'','obsolete exploration binding')
-
-          start=s.index('function runStage1Explore(){')
-          end=s.index('function clearTransient(){', start)
-          s=s[:start]+s[end:]
-
-          forbidden=['id=\"exploreSql\"','id=\"runExplore\"','stage1ExplorationHtml','runStage1Explore','SQL לחקירה · baseline','SQL לפתרון המשימה','נמדד באזור החקירה']
-          for x in forbidden:
-              if x in s: raise SystemExit(f'obsolete second-editor marker remains: {x}')
-          required=['function stage1BaselinePromptHtml()','השתמשו בעורך SQL היחיד למטה',"state.stage===1&&/\\bCOUNT\\s*\\(\\s*\\*\\s*\\)/i.test(val)","state.exploreRan[1]=true","state.stage===1&&!operationChoiceResolved(s)",'<b>SQL editor · אתם כותבים ומריצים</b>']
-          for x in required:
-              if x not in s: raise SystemExit(f'required single-editor marker missing: {x}')
-          prior_required=['אם ל-depot יש 3 drivers ו-3 routes, כמה rows ייווצרו בחיבור גולמי של שני ענפי ה-M?','eye:"מסלול → רכב · קשר M→1"',"renderQ(1,stage4RelationsHtml())","renderQ(2,'<div class=\"stage1-concept-note\"><p>לכל route יש match אחד בדיוק ב-vehicles.</p></div>')"]
-          for x in prior_required:
-              if x not in s: raise SystemExit(f'prior agreed fix missing: {x}')
-
-          p.write_text(s,encoding='utf-8')
-          PY
-      - name: Validate JavaScript syntax
-        run: |
+          python .github/scripts/routecraft_single_editor_fix.py
           python - <<'PY'
           from pathlib import Path
           import re
@@ -137,8 +27,12 @@ function stage1GuidedFlowHtml(s){
           PY
           node --check /tmp/routecraft-inline.js
           git diff --check
-      - name: Verify scope and commit app only
+      - name: Commit app if changed
         run: |
+          if git diff --quiet -- sql-lab/index.html; then
+            echo "No app changes needed"
+            exit 0
+          fi
           test "$(git diff --name-only | sort)" = "sql-lab/index.html"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
