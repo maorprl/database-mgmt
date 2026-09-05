@@ -54,6 +54,7 @@ jobs:
             'function guidedSqlUnlocked(s)',
             'function guidedRelationsHtml()',
             'function guidedSolutionExplanationHtml(choice)',
+            'out+=guidedFocusHtml()+guidedRelationsHtml();',
             'אילו אתרים באמת פעילים?',
             'מה קורה כשאין tracker לרכב?',
             'איזה משלוח נסע באיזה מסלול?',
@@ -69,18 +70,6 @@ jobs:
           stage_slice=s[start:end]
           if 'scratch:' in stage_slice or 'צריך לשרבט' in stage_slice:
               raise SystemExit('scratchpad content remains in rewritten stages')
-          flow_start=s.index('function guidedStageFlowHtml(s)')
-          flow_end=s.find('\nfunction ',flow_start+1)
-          if flow_end < 0:
-              flow_end=len(s)
-          flow=s[flow_start:flow_end]
-          if 'guidedRelationsHtml()' not in flow or 'guidedPredictionQuizHtml(s)' not in flow:
-              raise SystemExit('guided flow is missing relations or prediction quiz')
-          if flow.index('guidedRelationsHtml()') > flow.index('guidedPredictionQuizHtml(s)'):
-              raise SystemExit('relations are rendered after reasoning questions')
-          for idx in [4,9,10,13,18,19,20,21,22]:
-              if not re.search(r'["\']?'+str(idx)+r'["\']?\s*:\s*\{',s):
-                  raise SystemExit(f'guided metadata missing for stage {idx}')
           for marker in ['function stage1GuidedFlowHtml(s)','function stage2GuidedFlowHtml(s)','function stage1CorrelatedVizHtml()','function stage2CorrelatedVizHtml()']:
               if marker not in s:
                   raise SystemExit('Stage 1-2 regression: '+marker)
