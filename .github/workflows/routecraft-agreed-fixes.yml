@@ -1,0 +1,42 @@
+name: RouteCraft agreed fixes
+
+on:
+  push:
+    branches:
+      - routecraft-agreed-fixes
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]' && contains(github.event.head_commit.message, 'Trigger agreed fixes')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: routecraft-agreed-fixes
+          fetch-depth: 0
+      - name: Patch app
+        run: python .github/routecraft-one-editor-fix.py
+      - name: Validate JavaScript and scope
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sql-lab/index.html').read_text(encoding='utf-8')
+          scripts=[]
+          for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',s,re.S|re.I):
+              if 'src=' not in attrs.lower(): scripts.append(body)
+          Path('/tmp/routecraft-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/routecraft-inline.js
+          git diff --check
+          test "$(git diff --name-only | sort)" = "sql-lab/index.html"
+      - name: Commit app only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sql-lab/index.html
+          git commit -m "Apply agreed flow fixes"
+          git push origin routecraft-agreed-fixes
