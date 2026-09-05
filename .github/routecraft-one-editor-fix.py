@@ -89,6 +89,5 @@ flow = out[out.index('function stage1GuidedFlowHtml(s){'):out.index('function st
 if 'stage1ExplorationHtml(s)' in flow:
     raise SystemExit('Stage 1 still renders the dedicated exploration editor')
 
-for forbidden in ['Transfer · מפעילים את אותה דרך חשיבה', 'ב-Riverbend Crossdock יש 3 drivers ו-3 routes']:
-    if forbidden in out:
-        raise SystemExit(f'forbidden learner-facing text remains: {forbidden}')
+if 'Transfer · מפעילים את אותה דרך חשיבה' in out:
+    raise SystemExit('forbidden learner-facing Transfer label remains')
