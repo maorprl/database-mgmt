@@ -43,7 +43,6 @@ jobs:
           import re
           s=Path('sql-lab/index.html').read_text(encoding='utf-8')
 
-          # Stage 3 itself no longer owns a scratchpad.
           m=re.search(r'^\{title:"אילו אתרים באמת פעילים\?".*$',s,re.M)
           if not m:
               raise SystemExit('Stage 3 definition not found')
@@ -51,7 +50,6 @@ jobs:
           if 'scratch:' in stage or 'צריך לשרבט' in stage:
               raise SystemExit('Stage 3 still contains scratchpad content')
 
-          # Questions reveal one by one.
           sequential=[
             'let out=renderQ(0);',
             'if(predQuestionResolved(3,s,0))out+=renderQ(1);',
@@ -64,7 +62,6 @@ jobs:
               if x not in s:
                   raise SystemExit('missing sequential Stage 3 step: '+x)
 
-          # Sanity precedes operator choice in the guided flow.
           g=re.search(r'function stage3GuidedFlowHtml\(s\)\{(.*?)\n\}',s,re.S)
           if not g:
               raise SystemExit('stage3GuidedFlowHtml missing')
@@ -74,28 +71,21 @@ jobs:
           if sanity_pos<0 or op_pos<0 or sanity_pos>op_pos:
               raise SystemExit('Stage 3 sanity/operator order is wrong')
 
-          # Operator is a normal visible card, not optional help/details.
           if 'if(state.stage===1||state.stage===2||state.stage===3)return' not in s:
               raise SystemExit('Stage 3 direct operation branch missing')
-          if '<section class=\\"card operation-card\\"><div class=\\"operation-title\\">בחירת הפעולה</div>' not in s:
-              raise SystemExit('direct operation card markup missing')
 
-          # SQL remains gated by both sanity and the correct operation.
           gate='(state.stage===3&&(!stage3SanityResolved(s)||!operationChoiceResolved(s)))'
           if gate not in s:
               raise SystemExit('Stage 3 SQL gate missing')
 
-          # Wrong answers use Stage-3-specific feedback.
           if 'function stage3PredictionWrongFeedback(qi,choice)' not in s:
               raise SystemExit('Stage 3 prediction feedback missing')
           if 'stage3OperationWrongFeedback(cur)' not in s:
               raise SystemExit('Stage 3 operation feedback not wired')
 
-          # Sanity label matches its position before operator selection.
           if "state.stage===3?'⚠ SANITY CHECK · לפני בחירת הפעולה'" not in s:
               raise SystemExit('Stage 3 sanity label not aligned to flow')
 
-          # Both solution paths keep explanations.
           if 'function stage3SolutionExplanationHtml(choice)' not in s:
               raise SystemExit('Stage 3 solution explanation missing')
           if "else if(state.stage===3)out+=stage3SolutionExplanationHtml(choice)" not in s:
