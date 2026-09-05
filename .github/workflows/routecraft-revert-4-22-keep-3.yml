@@ -76,7 +76,7 @@ jobs:
 
           cur_spans=element_spans(current)
           old_spans=element_spans(old)
-          if len(cur_spans)!=23 or len(old_spans)!=23:
+          if len(cur_spans)!=24 or len(old_spans)!=24:
               raise SystemExit(f'unexpected stage count current={len(cur_spans)} old={len(old_spans)}')
 
           current_stage=[current[l:r] for l,r in cur_spans]
@@ -104,12 +104,12 @@ jobs:
           for idx in range(4,23):
               if out_stage[idx] != old_stage[idx]:
                   raise SystemExit(f'Stage {idx} does not match previous version')
-          for idx in range(0,3):
+          for idx in [0,1,2,23]:
               if out_stage[idx] != current_stage[idx]:
                   raise SystemExit(f'Stage {idx} changed unexpectedly')
           if new_gate not in out or old_gate in out:
               raise SystemExit('guided flow was not narrowed to Stage 3 only')
-          print('hybrid restore verified: current Stage 3 kept; Stages 4-22 restored')
+          print('hybrid restore verified: current Stage 3 kept; Stages 4-22 restored; Stage 23 untouched')
           PY
       - name: Validate JavaScript syntax
         run: |
@@ -139,7 +139,6 @@ jobs:
           ]
           for x in required:
               if x not in s: raise SystemExit('missing Stage 3 current-flow marker: '+x)
-          # These are markers from the old 4-22 course that must be back.
           old_markers=[
             'איך נשמור אתר שעדיין לא יצא ממנו מסלול?',
             'מה בדיוק אנחנו סופרים?',
@@ -150,7 +149,6 @@ jobs:
           ]
           for x in old_markers:
               if x not in s: raise SystemExit('missing restored old-stage marker: '+x)
-          # Mass-rewrite replacements that should no longer be active stage titles.
           if 'מה קורה כשאין tracker לרכב?' in s[s.index('const STAGES=['):s.index('function introHtml()')]:
               raise SystemExit('mass-rewrite Stage 5 title still present in STAGES')
           PY
