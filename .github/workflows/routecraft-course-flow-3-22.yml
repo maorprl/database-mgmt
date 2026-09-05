@@ -43,7 +43,6 @@ jobs:
           node --check /tmp/routecraft.js
       - name: Validate learner-flow contract
         run: |
-          grep -n -E 'showRelations|RelationsAfter|relationsAfter|guidedRelations' sql-lab/index.html | head -50 || true
           python - <<'PY'
           from pathlib import Path
           import re
@@ -70,8 +69,15 @@ jobs:
           stage_slice=s[start:end]
           if 'scratch:' in stage_slice or 'צריך לשרבט' in stage_slice:
               raise SystemExit('scratchpad content remains in rewritten stages')
-          if not re.search(r'["\']?showRelationsAfter["\']?\s*:\s*0',s):
-              raise SystemExit('Stage 3 relation timing contract missing')
+          flow_start=s.index('function guidedStageFlowHtml(s)')
+          flow_end=s.find('\nfunction ',flow_start+1)
+          if flow_end < 0:
+              flow_end=len(s)
+          flow=s[flow_start:flow_end]
+          if 'guidedRelationsHtml()' not in flow or 'guidedPredictionQuizHtml(s)' not in flow:
+              raise SystemExit('guided flow is missing relations or prediction quiz')
+          if flow.index('guidedRelationsHtml()') > flow.index('guidedPredictionQuizHtml(s)'):
+              raise SystemExit('relations are rendered after reasoning questions')
           for idx in [4,9,10,13,18,19,20,21,22]:
               if not re.search(r'["\']?'+str(idx)+r'["\']?\s*:\s*\{',s):
                   raise SystemExit(f'guided metadata missing for stage {idx}')
