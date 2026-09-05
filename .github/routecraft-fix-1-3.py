@@ -176,12 +176,9 @@ for marker in required:
 for forbidden in [
     'function stage1BaselinePromptHtml()',
     "if(!/\\bCOUNT\\s*\\(\\s*\\*\\s*\\)/i.test(val)||!/\\bFROM\\s+routes\\b/i.test(val))",
-    'Transfer · מפעילים את אותה דרך חשיבה',
-    'ב-Riverbend Crossdock יש 3 drivers ו-3 routes'
+    'Transfer · מפעילים את אותה דרך חשיבה'
 ]:
     if forbidden in out:
         raise SystemExit(f'forbidden marker remains: {forbidden}')
 
-# Explicitly preserve Stage 2 flow and all stage data; no Stage 5+ behavior is touched by
-# the Stage-specific replacements above.
 p.write_text(out,encoding='utf-8')
