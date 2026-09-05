@@ -66,26 +66,6 @@ function stage1GuidedFlowHtml(s){
     new_button = "<button class=\"run\" id=\"run\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה כדי לחקור את התוצאה. אם מסומן SQL, יורץ רק הטקסט המסומן.\">▶ הרץ וחקור</button>'+((state.stage===1&&!operationChoiceResolved(s))?'':'<button class=\"checkquery\" id=\"checkQuery\" '+(!db?'disabled':'')+' title=\"מריץ את השאילתה ובודק אותה מול דרישות התרגיל. אין צורך ללחוץ קודם על הרץ.\">✓ בדוק תשובה</button>')"
     s = replace_once(s, old_button, new_button, 'check answer gate')
 
-    old_run = ''' try{lastResult=exec(val);lastError='';queryFeedback='';}
- catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
- render();
-}'''
-    new_run = ''' try{
-   lastResult=exec(val);lastError='';queryFeedback='';
-   if(state.stage===1&&/\\bCOUNT\\s*\\(\\s*\\*\\s*\\)/i.test(val)&&/\\bFROM\\s+routes\\b/i.test(val)){
-     const n=Number(lastResult&&lastResult.values&&lastResult.values[0]&&lastResult.values[0][0]);
-     if(Number.isFinite(n)){
-       state.exploreRan[1]=true;
-       state.stage1BaselineCount=n;
-       save();
-     }
-   }
- }
- catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}
- render();
-}'''
-    s = replace_once(s, old_run, new_run, 'shared editor baseline detection')
-
     old_op = "if(checkOperation)checkOperation.onclick=()=>{state.operationChecked[state.stage]=true;save();render();};"
     new_op = "if(checkOperation)checkOperation.onclick=()=>{state.operationChecked[state.stage]=true;if(state.stage===1&&state.operationAnswers[1]===curr().operation.ans)invalidateResult();save();render();};"
     s = replace_once(s, old_op, new_op, 'stage1 stale baseline result')
@@ -104,6 +84,25 @@ function stage1GuidedFlowHtml(s){
     end = s.index('function clearTransient(){', start)
     s = s[:start] + s[end:]
 
+    run_start = s.index('function runCurrent(){')
+    run_end = s.index('function clearTransient(){', run_start)
+    run_block = s[run_start:run_end]
+    old_exec = "try{lastResult=exec(val);lastError='';queryFeedback='';}\n catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}"
+    new_exec = """try{
+   lastResult=exec(val);lastError='';queryFeedback='';
+   if(state.stage===1&&/\\bCOUNT\\s*\\(\\s*\\*\\s*\\)/i.test(val)&&/\\bFROM\\s+routes\\b/i.test(val)){
+     const n=Number(lastResult&&lastResult.values&&lastResult.values[0]&&lastResult.values[0][0]);
+     if(Number.isFinite(n)){
+       state.exploreRan[1]=true;
+       state.stage1BaselineCount=n;
+       save();
+     }
+   }
+ }
+ catch(e){lastResult=null;lastError=friendlySqlError(e.message,val,state.stage);queryFeedback='';}"""
+    run_block = replace_once(run_block, old_exec, new_exec, 'runCurrent baseline detection')
+    s = s[:run_start] + run_block + s[run_end:]
+
     p.write_text(s, encoding='utf-8')
 
 s = p.read_text(encoding='utf-8')
@@ -118,6 +117,7 @@ for x in [
     'function stage1BaselinePromptHtml()',
     'השתמשו בעורך SQL היחיד למטה',
     'state.exploreRan[1]=true',
+    'state.stage1BaselineCount=n',
     'state.stage===1&&!operationChoiceResolved(s)',
     '<b>SQL editor · אתם כותבים ומריצים</b>',
     'FROM\\s+routes'
