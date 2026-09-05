@@ -81,7 +81,7 @@ function stage1GuidedFlowHtml(s){
     s = replace_once(s, old_bind, '', 'obsolete exploration binding')
 
     start = s.index('function runStage1Explore(){')
-    end = s.index('function clearTransient(){', start)
+    end = s.index('function stage1CorrelatedVizHtml(){', start)
     s = s[:start] + s[end:]
 
     run_start = s.index('function runCurrent(){')
@@ -120,7 +120,7 @@ for x in [
     'state.stage1BaselineCount=n',
     'state.stage===1&&!operationChoiceResolved(s)',
     '<b>SQL editor · אתם כותבים ומריצים</b>',
-    'FROM\\s+routes'
+    'function runCurrent(){'
 ]:
     if x not in s:
         raise SystemExit(f'required single-editor marker missing: {x}')
