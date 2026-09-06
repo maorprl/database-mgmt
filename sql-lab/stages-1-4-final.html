@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RouteCraft SQL Lab · Stages 1–4</title>
+</head>
+<body>
+<div id="status" style="font-family:Arial,sans-serif;padding:24px">טוען את RouteCraft · Stages 1–4…</div>
+<div id="parts" hidden></div>
+<script>
+(()=>{
+  const host=document.getElementById('parts');
+  const parts=new Array(8);
+  let loaded=0, failed=false;
+
+  const fail=(msg)=>{
+    if(failed)return;
+    failed=true;
+    document.getElementById('status').innerHTML='<pre style="direction:ltr;text-align:left;padding:20px">'+msg+'</pre>';
+  };
+
+  const finish=async()=>{
+    try{
+      const b64=parts.join('').replace(/\s+/g,'');
+      const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+      const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      let html=await new Response(stream).text();
+
+      html=html.replace("const STORAGE_KEY='routecraft-sql-lab-v1';","const STORAGE_KEY='routecraft-sql-lab-stages-1-4-final-v1';");
+      html=html.replace('<title>RouteCraft SQL Lab</title>','<title>RouteCraft SQL Lab · Stages 1–4</title>');
+      html=html.replace("const SQL=await initSqlJs({locateFile:f=>'https://cdn.jsdelivr.net/npm/sql.js@1.14.1/dist/'+f});","const SQL=await initSqlJs();");
+      const boundary="];\n\nconst COURSE_RELATION_SCHEMAS=";
+      if(!html.includes(boundary)) throw new Error('Could not isolate Stages 1–4');
+      html=html.replace(boundary,"];\nSTAGES.splice(5);\n\nconst COURSE_RELATION_SCHEMAS=");
+
+      document.open();
+      document.write(html);
+      document.close();
+    }catch(err){ fail(String(err)); }
+  };
+
+  for(let i=0;i<8;i++){
+    const frame=document.createElement('iframe');
+    frame.hidden=true;
+    frame.src=`stages-1-4-data/part-${i+1}.txt?v=final1`;
+    frame.onload=()=>{
+      try{
+        const text=(frame.contentDocument.body.innerText||frame.contentDocument.body.textContent||'').trim();
+        if(!text || text.startsWith('<!DOCTYPE html>')) throw new Error('empty or invalid part');
+        parts[i]=text;
+        loaded++;
+        if(loaded===8) finish();
+      }catch(err){ fail(`Failed to read part-${i+1}: ${err}`); }
+    };
+    frame.onerror=()=>fail(`Failed to load part-${i+1}`);
+    host.appendChild(frame);
+  }
+})();
+</script>
+</body>
+</html>
