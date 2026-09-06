@@ -18,11 +18,16 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import base64, gzip
+          import base64, gzip, zlib
 
           parts_dir = Path('sql-lab/stages-1-4-data')
           payload = ''.join((parts_dir / f'part-{i}.txt').read_text(encoding='utf-8').strip() for i in range(1, 9))
-          html = gzip.decompress(base64.b64decode(payload)).decode('utf-8')
+          raw = base64.b64decode(payload)
+          try:
+              decoded = gzip.decompress(raw)
+          except gzip.BadGzipFile:
+              decoded = zlib.decompress(raw[10:-8], -zlib.MAX_WBITS)
+          html = decoded.decode('utf-8')
 
           html = html.replace("const STORAGE_KEY='routecraft-sql-lab-stages-1-4-v1';", "const STORAGE_KEY='routecraft-sql-lab-stages-1-4-simple-v1';")
           html = html.replace("const SQL=await initSqlJs({locateFile:f=>'https://cdn.jsdelivr.net/npm/sql.js@1.14.1/dist/'+f});", "const SQL=await initSqlJs();")
