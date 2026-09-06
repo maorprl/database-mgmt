@@ -6,34 +6,56 @@
 <title>RouteCraft SQL Lab · Stages 1–4</title>
 </head>
 <body>
-<div style="font-family:Arial,sans-serif;padding:24px">טוען את RouteCraft · Stages 1–4…</div>
+<div id="status" style="font-family:Arial,sans-serif;padding:24px">טוען את RouteCraft · Stages 1–4…</div>
+<div id="parts" hidden></div>
 <script>
-(async()=>{
-  const base="https://raw.githubusercontent.com/maorprl/database-mgmt/main/sql-lab/stages-1-4-data/";
-  const paths=Array.from({length:8},(_,i)=>`${base}part-${i+1}.txt`);
-  const parts=await Promise.all(paths.map(async p=>{
-    const r=await fetch(p,{cache:"no-store"});
-    if(!r.ok) throw new Error(`Failed to load ${p}: ${r.status}`);
-    return (await r.text()).trim();
-  }));
-  const b64=parts.join("");
-  const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-  let html=await new Response(stream).text();
+(()=>{
+  const host=document.getElementById('parts');
+  const parts=new Array(8);
+  let loaded=0, failed=false;
 
-  // Keep this live copy isolated from the full course and expose only numbered Stages 1–4.
-  html=html.replace("const STORAGE_KEY='routecraft-sql-lab-v1';","const STORAGE_KEY='routecraft-sql-lab-stages-1-4-v1';");
-  html=html.replace("<title>RouteCraft SQL Lab</title>","<title>RouteCraft SQL Lab · Stages 1–4</title>");
-  const stageBoundary="];\n\nconst COURSE_RELATION_SCHEMAS=";
-  if(!html.includes(stageBoundary)) throw new Error("Could not isolate Stages 1–4");
-  html=html.replace(stageBoundary,"];\nSTAGES.splice(5);\n\nconst COURSE_RELATION_SCHEMAS=");
+  const fail=(msg)=>{
+    if(failed)return;
+    failed=true;
+    document.getElementById('status').innerHTML='<pre style="direction:ltr;text-align:left;padding:20px">'+msg+'</pre>';
+  };
 
-  document.open();
-  document.write(html);
-  document.close();
-})().catch(err=>{
-  document.body.innerHTML='<pre style="direction:ltr;text-align:left;padding:20px">'+String(err)+'</pre>';
-});
+  const finish=async()=>{
+    try{
+      const b64=parts.join('').replace(/\s+/g,'');
+      const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+      const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      let html=await new Response(stream).text();
+
+      html=html.replace("const STORAGE_KEY='routecraft-sql-lab-v1';","const STORAGE_KEY='routecraft-sql-lab-stages-1-4-v2';");
+      html=html.replace('<title>RouteCraft SQL Lab</title>','<title>RouteCraft SQL Lab · Stages 1–4</title>');
+      const boundary="];\n\nconst COURSE_RELATION_SCHEMAS=";
+      if(!html.includes(boundary)) throw new Error('Could not isolate Stages 1–4');
+      html=html.replace(boundary,"];\nSTAGES.splice(5);\n\nconst COURSE_RELATION_SCHEMAS=");
+
+      document.open();
+      document.write(html);
+      document.close();
+    }catch(err){ fail(String(err)); }
+  };
+
+  for(let i=0;i<8;i++){
+    const frame=document.createElement('iframe');
+    frame.hidden=true;
+    frame.src=`stages-1-4-data/part-${i+1}.txt?v=2`;
+    frame.onload=()=>{
+      try{
+        const text=(frame.contentDocument.body.innerText||frame.contentDocument.body.textContent||'').trim();
+        if(!text || text.startsWith('<!DOCTYPE html>')) throw new Error('empty or invalid part');
+        parts[i]=text;
+        loaded++;
+        if(loaded===8) finish();
+      }catch(err){ fail(`Failed to read part-${i+1}: ${err}`); }
+    };
+    frame.onerror=()=>fail(`Failed to load part-${i+1}`);
+    host.appendChild(frame);
+  }
+})();
 </script>
 </body>
 </html>
